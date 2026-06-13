@@ -94,8 +94,9 @@ extension Treatments {
         var carbsRequired: Decimal?
         var useFPUconversion: Bool = false
         var dish: String = ""
-        var selection: MealPresetStored?
-        var summation: [String] = []
+
+        /// The current meal being assembled from saved presets (transient; the saved presets live in Core Data).
+        var mealPresetItems: [MealPresetItem] = []
         var maxCarbs: Decimal = 0
         var maxFat: Decimal = 0
         var maxProtein: Decimal = 0
@@ -665,43 +666,122 @@ extension Treatments {
 
         // MARK: - Presets
 
-        func deletePreset() {
-            if selection != nil {
-                viewContext.delete(selection!)
-
-                do {
-                    guard viewContext.hasChanges else { return }
-                    try viewContext.save()
-                } catch {
-                    print(error.localizedDescription)
-                }
-                carbs = 0
-                fat = 0
-                protein = 0
-            }
-            selection = nil
+        /// Carb total of the current meal (sum of each preset's carbs × quantity).
+        var mealCarbs: Decimal {
+            mealPresetItems.reduce(Decimal(0)) { $0 + decimal($1.preset.carbs) * Decimal($1.quantity) }
         }
 
-        func removePresetFromNewMeal() {
-            let a = summation.firstIndex(where: { $0 == selection?.dish! })
-            if a != nil, summation[a ?? 0] != "" {
-                summation.remove(at: a!)
-            }
+        /// Fat total of the current meal.
+        var mealFat: Decimal {
+            mealPresetItems.reduce(Decimal(0)) { $0 + decimal($1.preset.fat) * Decimal($1.quantity) }
         }
 
-        func addPresetToNewMeal() {
-            if let selection = selection, let dish = selection.dish {
-                summation.append(dish)
+        /// Protein total of the current meal.
+        var mealProtein: Decimal {
+            mealPresetItems.reduce(Decimal(0)) { $0 + decimal($1.preset.protein) * Decimal($1.quantity) }
+        }
+
+        private func decimal(_ value: NSDecimalNumber?) -> Decimal {
+            ((value ?? 0) as NSDecimalNumber) as Decimal
+        }
+
+        /// Add one serving of a preset to the current meal, incrementing the quantity if it is already present.
+        func addPresetToMeal(_ preset: MealPresetStored) {
+            if let index = mealPresetItems.firstIndex(where: { $0.preset.objectID == preset.objectID }) {
+                mealPresetItems[index].quantity += 1
+            } else {
+                mealPresetItems.append(MealPresetItem(preset: preset, quantity: 1))
             }
         }
 
-        func addNewPresetToWaitersNotepad(_ dish: String) {
-            summation.append(dish)
+        /// Increase the quantity of a meal item by one.
+        func incrementMealItem(_ item: MealPresetItem) {
+            guard let index = mealPresetItems.firstIndex(where: { $0.id == item.id }) else { return }
+            mealPresetItems[index].quantity += 1
         }
 
-        func addToSummation() {
-            summation.append(selection?.dish ?? "")
+        /// Decrease the quantity of a meal item by one (only when the quantity is greater than one).
+        func decrementMealItem(_ item: MealPresetItem) {
+            guard let index = mealPresetItems.firstIndex(where: { $0.id == item.id }),
+                  mealPresetItems[index].quantity > 1 else { return }
+            mealPresetItems[index].quantity -= 1
         }
+
+        /// Remove a meal item entirely, regardless of its quantity.
+        func removeMealItem(_ item: MealPresetItem) {
+            mealPresetItems.removeAll { $0.id == item.id }
+        }
+
+        /// Whether the given preset is currently part of the meal being assembled.
+        func mealContains(_ preset: MealPresetStored) -> Bool {
+            mealPresetItems.contains { $0.preset.objectID == preset.objectID }
+        }
+
+        /// Persist a new meal preset. Returns the created object so callers can immediately add it to a meal.
+        @discardableResult func createPreset(
+            dish: String,
+            carbs: Decimal,
+            fat: Decimal,
+            protein: Decimal
+        ) -> MealPresetStored? {
+            let trimmed = dish.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return nil }
+
+            let preset = MealPresetStored(context: viewContext)
+            preset.dish = trimmed
+            preset.carbs = carbs as NSDecimalNumber
+            if useFPUconversion {
+                preset.fat = fat as NSDecimalNumber
+                preset.protein = protein as NSDecimalNumber
+            }
+
+            do {
+                try viewContext.save()
+                return preset
+            } catch {
+                debug(.default, "\(DebuggingIdentifiers.failed) Failed to save Meal Preset: \(error)")
+                viewContext.rollback()
+                return nil
+            }
+        }
+
+        /// Permanently delete a saved preset, also removing it from the current meal.
+        func deletePreset(_ preset: MealPresetStored) {
+            mealPresetItems.removeAll { $0.preset.objectID == preset.objectID }
+            viewContext.delete(preset)
+            do {
+                guard viewContext.hasChanges else { return }
+                try viewContext.save()
+            } catch {
+                debug(.default, "\(DebuggingIdentifiers.failed) Failed to delete Meal Preset: \(error)")
+            }
+        }
+
+        /// Commit the assembled meal's macros to the treatment being entered.
+        func commitMealToTreatments() {
+            carbs += mealCarbs
+            if useFPUconversion {
+                fat += mealFat
+                protein += mealProtein
+            }
+        }
+
+        /// Clear the in-progress meal.
+        func resetMeal() {
+            mealPresetItems.removeAll()
+        }
+    }
+}
+
+/// A single line item in an assembled meal: a saved preset plus how many servings of it are included.
+struct MealPresetItem: Identifiable, Equatable {
+    let preset: MealPresetStored
+    var quantity: Int
+
+    var id: NSManagedObjectID { preset.objectID }
+
+    static func == (lhs: MealPresetItem, rhs: MealPresetItem) -> Bool {
+        lhs.preset.objectID == rhs.preset.objectID && lhs.quantity == rhs.quantity
     }
 }
 

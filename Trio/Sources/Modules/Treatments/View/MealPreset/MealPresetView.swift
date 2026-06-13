@@ -2,30 +2,34 @@ import CoreData
 import Foundation
 import SwiftUI
 
+/// Root screen of the Presets flow: the meal (cart) the user is assembling.
+///
+/// The saved presets themselves live in Core Data and are browsed/added from ``FoodPickerView``.
+/// On first entry, an empty meal automatically summons the food picker (or, when no presets exist
+/// yet, the create-preset sheet). Macros are committed to the treatment via "Add to Treatments".
 struct MealPresetView: View {
     @Bindable var state: Treatments.StateModel
 
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
-    @Environment(\.managedObjectContext) var moc
+    @Environment(\.managedObjectContext) private var moc
     @Environment(AppState.self) var appState
-
-    @State private var showAlert = false
-    @State private var dish: String = ""
-    @State private var showAddNewPresetSheet = false
-
-    @State private var presetCarbs: Decimal = 0
-    @State private var presetFat: Decimal = 0
-    @State private var presetProtein: Decimal = 0
-
-    @State private var carbs: Decimal = 0
-    @State private var fat: Decimal = 0
-    @State private var protein: Decimal = 0
 
     @FetchRequest(
         entity: MealPresetStored.entity(),
         sortDescriptors: [NSSortDescriptor(key: "dish", ascending: true)]
-    ) var carbPresets: FetchedResults<MealPresetStored>
+    ) private var carbPresets: FetchedResults<MealPresetStored>
+
+    @State private var didInitialSummon = false
+    @State private var showFoodPicker = false
+    @State private var showForcedCreate = false
+    @State private var tooltipItemID: NSManagedObjectID?
+
+    // Create-preset form, used for the forced "no presets yet" path.
+    @State private var newDish = ""
+    @State private var newCarbs: Decimal = 0
+    @State private var newFat: Decimal = 0
+    @State private var newProtein: Decimal = 0
 
     private var mealFormatter: NumberFormatter {
         let formatter = NumberFormatter()
@@ -34,321 +38,501 @@ struct MealPresetView: View {
         return formatter
     }
 
-    private var color: LinearGradient {
-        colorScheme == .dark ? LinearGradient(
-            gradient: Gradient(colors: [
-                Color.bgDarkBlue,
-                Color.bgDarkerDarkBlue
-            ]),
-            startPoint: .top,
-            endPoint: .bottom
+    var body: some View {
+        NavigationStack {
+            Group {
+                if state.mealPresetItems.isEmpty {
+                    emptyMeal
+                } else {
+                    mealList
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(appState.trioBackgroundColor(for: colorScheme))
+            .navigationTitle("Meal")
+            .navigationBarTitleDisplayMode(.automatic)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Close") { dismiss() }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showFoodPicker = true
+                    } label: {
+                        HStack {
+                            Text("Add Food")
+                            Image(systemName: "plus")
+                        }
+                    }
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                if !state.mealPresetItems.isEmpty {
+                    bottomBar
+                }
+            }
+            .sheet(isPresented: $showFoodPicker) {
+                FoodPickerView(state: state)
+                    .environment(\.managedObjectContext, moc)
+            }
+            .sheet(isPresented: $showForcedCreate) {
+                AddMealPresetView(
+                    dish: $newDish,
+                    presetCarbs: $newCarbs,
+                    presetFat: $newFat,
+                    presetProtein: $newProtein,
+                    displayFatAndProtein: $state.useFPUconversion,
+                    onSave: {
+                        if let preset = state.createPreset(
+                            dish: newDish,
+                            carbs: newCarbs,
+                            fat: newFat,
+                            protein: newProtein
+                        ) {
+                            state.addPresetToMeal(preset)
+                        }
+                        resetCreateForm()
+                        showForcedCreate = false
+                    },
+                    onCancel: {
+                        // Backing out of the forced create step leaves the whole Presets feature.
+                        resetCreateForm()
+                        dismiss()
+                    }
+                )
+            }
+            .onAppear(perform: summonInitialScreenIfNeeded)
+            .onDisappear {
+                state.resetMeal()
+            }
+        }
+    }
+
+    // MARK: - Meal (empty)
+
+    private var emptyMeal: some View {
+        ContentUnavailableView {
+            Label("No Foods in Meal", systemImage: "fork.knife")
+        } description: {
+            Text("Add foods from your saved presets to build this meal.")
+        } actions: {
+            Button {
+                showFoodPicker = true
+            } label: {
+                Text("Add Food")
+            }
+            .buttonStyle(.borderedProminent)
+        }
+    }
+
+    // MARK: - Meal (with items)
+
+    private var mealList: some View {
+        Form {
+            Section(header: Text("This Meal")) {
+                ForEach(state.mealPresetItems) { item in
+                    mealRow(item)
+                }
+            }
+            .listRowBackground(Color.chart)
+        }
+    }
+
+    private func mealRow(_ item: MealPresetItem) -> some View {
+        HStack {
+            Text(item.preset.dish ?? "")
+            Spacer()
+            HStack(spacing: 16) {
+                Button {
+                    minusTapped(item)
+                } label: {
+                    Image(systemName: "minus.circle.fill").font(.title3)
+                }
+                .tint(.blue)
+                .popover(isPresented: tooltipBinding(for: item), arrowEdge: .bottom) {
+                    Button(role: .destructive) {
+                        tooltipItemID = nil
+                        state.removeMealItem(item)
+                    } label: {
+                        Label("Delete from meal", systemImage: "trash")
+                    }
+                    .padding()
+                    .presentationCompactAdaptation(.popover)
+                }
+
+                Text("\(item.quantity)")
+                    .font(.headline)
+                    .frame(minWidth: 24)
+
+                Button {
+                    state.incrementMealItem(item)
+                } label: {
+                    Image(systemName: "plus.circle.fill").font(.title3)
+                }
+                .tint(.blue)
+            }
+            .buttonStyle(.borderless)
+        }
+    }
+
+    private func minusTapped(_ item: MealPresetItem) {
+        if item.quantity > 1 {
+            state.decrementMealItem(item)
+        } else {
+            // At quantity 1, surface a confirmation tooltip instead of silently removing the item.
+            tooltipItemID = item.id
+        }
+    }
+
+    private func tooltipBinding(for item: MealPresetItem) -> Binding<Bool> {
+        Binding(
+            get: { tooltipItemID == item.id },
+            set: { isShown in if !isShown { tooltipItemID = nil } }
         )
-            :
-            LinearGradient(
-                gradient: Gradient(colors: [Color.gray.opacity(0.1)]),
-                startPoint: .top,
-                endPoint: .bottom
-            )
+    }
+
+    // MARK: - Bottom bar
+
+    private var bottomBar: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 16) {
+                macroLabel("Carbs", value: state.mealCarbs)
+                if state.useFPUconversion {
+                    macroLabel("Protein", value: state.mealProtein)
+                    macroLabel("Fat", value: state.mealFat)
+                }
+                Spacer()
+            }
+            .font(.footnote)
+
+            Button {
+                state.commitMealToTreatments()
+                dismiss()
+            } label: {
+                Text("Add to Treatments")
+                    .font(.headline)
+                    .foregroundStyle(Color.white)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+        }
+        .padding()
+        .background(.bar)
+    }
+
+    private func macroLabel(_ title: LocalizedStringKey, value: Decimal) -> some View {
+        HStack(spacing: 4) {
+            Text(title).foregroundStyle(.secondary)
+            Text("\(value as NSNumber, formatter: mealFormatter) g")
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func summonInitialScreenIfNeeded() {
+        guard !didInitialSummon else { return }
+        didInitialSummon = true
+        guard state.mealPresetItems.isEmpty else { return }
+        if carbPresets.isEmpty {
+            showForcedCreate = true
+        } else {
+            showFoodPicker = true
+        }
+    }
+
+    private func resetCreateForm() {
+        newDish = ""
+        newCarbs = 0
+        newFat = 0
+        newProtein = 0
+    }
+}
+
+/// Inner sheet listing the saved meal presets. Tapping a food adds it to the meal and dismisses;
+/// "Select Multiple" enables batch-adding; "Edit Presets" enables permanent deletion of saved presets.
+struct FoodPickerView: View {
+    enum Mode {
+        case normal
+        case multiAdd
+        case editPresets
+    }
+
+    @Bindable var state: Treatments.StateModel
+
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(AppState.self) private var appState
+
+    @FetchRequest(
+        entity: MealPresetStored.entity(),
+        sortDescriptors: [NSSortDescriptor(key: "dish", ascending: true)]
+    ) private var carbPresets: FetchedResults<MealPresetStored>
+
+    @State private var mode: Mode = .normal
+    @State private var selectedForAdd: Set<NSManagedObjectID> = []
+    @State private var showCreate = false
+    @State private var presetPendingDelete: MealPresetStored?
+    @State private var showDeleteInMealAlert = false
+
+    // Create-preset form.
+    @State private var newDish = ""
+    @State private var newCarbs: Decimal = 0
+    @State private var newFat: Decimal = 0
+    @State private var newProtein: Decimal = 0
+
+    private var mealFormatter: NumberFormatter {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = 1
+        return formatter
     }
 
     var body: some View {
         NavigationStack {
-            Form {
-                mealPresets
-                dishInfos()
-                addPresetToTreatmentsButton
+            Group {
+                if carbPresets.isEmpty {
+                    emptyLibrary
+                } else {
+                    presetList
+                }
             }
             .scrollContentBackground(.hidden)
             .background(appState.trioBackgroundColor(for: colorScheme))
-            .navigationTitle("Meal Presets")
-            .navigationBarTitleDisplayMode(.automatic)
-            .toolbar(content: {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Text("Close")
-                    }
+            .navigationTitle(navTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .environment(\.editMode, .constant(mode == .editPresets ? .active : .inactive))
+            .toolbar { toolbarContent }
+            .safeAreaInset(edge: .bottom) {
+                if mode == .multiAdd {
+                    addSelectedBar
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: {
-                        showAddNewPresetSheet.toggle()
-                    }, label: {
-                        HStack {
-                            Text("New Preset")
-                            Image(systemName: "plus")
-                        }
-                    })
-                }
-            })
-            .sheet(isPresented: $showAddNewPresetSheet) {
+            }
+            .alert(
+                "Delete preset?",
+                isPresented: $showDeleteInMealAlert,
+                presenting: presetPendingDelete
+            ) { preset in
+                Button("Cancel", role: .cancel) {}
+                Button("Delete", role: .destructive) { state.deletePreset(preset) }
+            } message: { preset in
+                Text(
+                    "'\(preset.dish ?? "")' is in your current meal. Deleting the preset will also remove it from the meal."
+                )
+            }
+            .sheet(isPresented: $showCreate) {
                 AddMealPresetView(
-                    dish: $dish,
-                    presetCarbs: $presetCarbs,
-                    presetFat: $presetFat,
-                    presetProtein: $presetProtein,
+                    dish: $newDish,
+                    presetCarbs: $newCarbs,
+                    presetFat: $newFat,
+                    presetProtein: $newProtein,
                     displayFatAndProtein: $state.useFPUconversion,
-                    onSave: savePreset,
+                    onSave: {
+                        state.createPreset(dish: newDish, carbs: newCarbs, fat: newFat, protein: newProtein)
+                        resetCreateForm()
+                        showCreate = false
+                    },
                     onCancel: {
-                        showAddNewPresetSheet.toggle()
-                        resetNewPresetForm()
+                        resetCreateForm()
+                        showCreate = false
                     }
                 )
             }
-            .onDisappear {
-                resetValues()
+            .onChange(of: carbPresets.isEmpty) { _, isEmpty in
+                if isEmpty {
+                    mode = .normal
+                    selectedForAdd.removeAll()
+                }
             }
         }
     }
 
-    private var mealPresets: some View {
-        Section {
-            HStack {
-                if state.selection != nil {
-                    minusButton
-                }
-                Picker("Preset", selection: $state.selection) {
-                    Text("Saved Food").tag(nil as MealPresetStored?)
-                    ForEach(carbPresets, id: \.self) { (preset: MealPresetStored) in
-                        Text(preset.dish ?? "").tag(preset as MealPresetStored?)
-                    }
-                }
-                .onChange(of: state.selection) {
-                    carbs += ((state.selection?.carbs ?? 0) as NSDecimalNumber) as Decimal
-                    if state.useFPUconversion {
-                        fat += ((state.selection?.fat ?? 0) as NSDecimalNumber) as Decimal
-                        protein += ((state.selection?.protein ?? 0) as NSDecimalNumber) as Decimal
-                    }
-
-                    state.addPresetToNewMeal()
-                }
-                .labelsHidden()
-                .frame(maxWidth: .infinity, alignment: .center)
-                if state.selection != nil {
-                    plusButton
-                }
-            }
-
-            HStack {
-                Spacer()
-
-                Button("Delete Preset") {
-                    showAlert.toggle()
-                }
-                .disabled(state.selection == nil)
-                .tint(.orange)
-                .buttonStyle(.borderless)
-                .alert(
-                    "Delete preset '\(state.selection?.dish ?? "")'?",
-                    isPresented: $showAlert,
-                    actions: {
-                        Button("No", role: .cancel) {}
-                        Button("Yes", role: .destructive) {
-                            if let selection = state.selection {
-                                let previousSelection = state.selection
-                                let count = state.summation.filter { $0 == selection.dish }.count
-                                state.summation.removeAll { $0 == selection.dish }
-                                carbs -= (((selection.carbs ?? 0) as NSDecimalNumber) as Decimal) * Decimal(count)
-                                fat -= (((selection.fat ?? 0) as NSDecimalNumber) as Decimal) * Decimal(count)
-                                protein -= (((selection.protein ?? 0) as NSDecimalNumber) as Decimal) * Decimal(count)
-                                state.deletePreset()
-                                state.selection = previousSelection
-                            }
-                        }
-                    }
-                )
-
-                Spacer()
-            }
-        }.listRowBackground(Color.chart)
+    private var navTitle: String {
+        switch mode {
+        case .normal: return String(localized: "Foods")
+        case .multiAdd: return String(localized: "Select Foods")
+        case .editPresets: return String(localized: "Edit Presets")
+        }
     }
 
-    private var addPresetToTreatmentsButton: some View {
+    @ToolbarContentBuilder private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            switch mode {
+            case .normal:
+                Button("Cancel") { dismiss() }
+            case .multiAdd:
+                Button("Cancel") {
+                    mode = .normal
+                    selectedForAdd.removeAll()
+                }
+            case .editPresets:
+                Button("Done") { mode = .normal }
+            }
+        }
+        if mode == .normal, !carbPresets.isEmpty {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button {
+                        mode = .multiAdd
+                    } label: {
+                        Label("Select Multiple", systemImage: "checkmark.circle")
+                    }
+                    Button {
+                        mode = .editPresets
+                    } label: {
+                        Label("Edit Presets", systemImage: "pencil")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+            }
+        }
+    }
+
+    // MARK: - Library (empty)
+
+    private var emptyLibrary: some View {
+        ContentUnavailableView {
+            Label("No Saved Foods", systemImage: "tray")
+        } description: {
+            Text("Create a preset to start adding foods to your meal.")
+        } actions: {
+            Button {
+                showCreate = true
+            } label: {
+                Text("Add New Preset")
+            }
+            .buttonStyle(.borderedProminent)
+        }
+    }
+
+    // MARK: - Library (with presets)
+
+    private var presetList: some View {
+        Form {
+            Section {
+                ForEach(carbPresets) { preset in
+                    presetRow(preset)
+                }
+                .onDelete(perform: deleteRows)
+            }
+            .listRowBackground(Color.chart)
+
+            if mode == .normal {
+                Section {
+                    Button {
+                        showCreate = true
+                    } label: {
+                        Label("Add New Preset", systemImage: "plus")
+                    }
+                }
+                .listRowBackground(Color.chart)
+            }
+        }
+    }
+
+    private func presetRow(_ preset: MealPresetStored) -> some View {
         Button {
-            state.carbs += carbs
-            state.fat += fat
-            state.protein += protein
-
-            dismiss()
+            rowTapped(preset)
+        } label: {
+            HStack {
+                if mode == .multiAdd {
+                    Image(systemName: selectedForAdd.contains(preset.objectID) ? "checkmark.circle.fill" : "circle")
+                        .foregroundStyle(selectedForAdd.contains(preset.objectID) ? Color.accentColor : Color.secondary)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(preset.dish ?? "")
+                        .foregroundStyle(.primary)
+                    Text(macroSummary(preset))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if mode == .normal {
+                    Image(systemName: "plus.circle.fill")
+                        .foregroundStyle(.blue)
+                }
+            }
+            .contentShape(Rectangle())
         }
-        label: {
-            Text("Add to Treatments")
+        .buttonStyle(.plain)
+    }
+
+    private func rowTapped(_ preset: MealPresetStored) {
+        switch mode {
+        case .normal:
+            state.addPresetToMeal(preset)
+            dismiss()
+        case .multiAdd:
+            if selectedForAdd.contains(preset.objectID) {
+                selectedForAdd.remove(preset.objectID)
+            } else {
+                selectedForAdd.insert(preset.objectID)
+            }
+        case .editPresets:
+            break
+        }
+    }
+
+    private func deleteRows(_ offsets: IndexSet) {
+        for index in offsets {
+            let preset = carbPresets[index]
+            if state.mealContains(preset) {
+                // Deleting a preset that is part of the meal needs explicit confirmation.
+                presetPendingDelete = preset
+                showDeleteInMealAlert = true
+            } else {
+                state.deletePreset(preset)
+            }
+        }
+    }
+
+    // MARK: - Multi-select bar
+
+    private var addSelectedBar: some View {
+        Button {
+            addSelectedToMeal()
+        } label: {
+            Text(selectedForAdd.isEmpty ? "Select Foods to Add" : "Add \(selectedForAdd.count) to Meal")
                 .font(.headline)
                 .foregroundStyle(Color.white)
-                .frame(maxWidth: .infinity, alignment: .center)
+                .frame(maxWidth: .infinity)
         }
-        .disabled(noPresetChosen)
-        .listRowBackground(noPresetChosen ? Color(.systemGray3) : Color(.systemBlue))
-        .shadow(radius: 3)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
+        .disabled(selectedForAdd.isEmpty)
+        .padding()
+        .background(.bar)
     }
 
-    private var noPresetChosen: Bool {
-        state.selection == nil || state.summation.isEmpty
+    private func addSelectedToMeal() {
+        for preset in carbPresets where selectedForAdd.contains(preset.objectID) {
+            state.addPresetToMeal(preset)
+        }
+        dismiss()
     }
 
-    @ViewBuilder private func dishInfos() -> some View {
-        if !state.summation.isEmpty {
-            let presetSummary = generatePresetSummary()
+    // MARK: - Helpers
 
-            Section(header: Text("Summary")) {
-                presetSummary
-                    .lineLimit(nil) // In case the text is too long, allow it to wrap to the next line
-
-                LazyVGrid(columns: [
-                    GridItem(.flexible(), alignment: .leading),
-                    GridItem(.flexible(), alignment: .trailing)
-                ], spacing: 0) {
-                    Group {
-                        Text("Carbs: ")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                        HStack(spacing: 2) {
-                            Text("\(carbs as NSNumber, formatter: mealFormatter)")
-                                .font(.footnote)
-                            Text(" g")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    if state.useFPUconversion {
-                        Group {
-                            Text("Protein: ")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                            HStack(spacing: 2) {
-                                Text("\(protein as NSNumber, formatter: mealFormatter)")
-                                    .font(.footnote)
-                                Text(" g")
-                                    .font(.footnote)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-
-                        Group {
-                            Text("Fat: ")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                            HStack(spacing: 2) {
-                                Text("\(fat as NSNumber, formatter: mealFormatter)")
-                                    .font(.footnote)
-                                Text(" g")
-                                    .font(.footnote)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                }
-            }.listRowBackground(Color.chart)
+    private func macroSummary(_ preset: MealPresetStored) -> String {
+        let carbs = decimalString(preset.carbs)
+        if state.useFPUconversion {
+            let protein = decimalString(preset.protein)
+            let fat = decimalString(preset.fat)
+            return String(localized: "\(carbs) g carbs · \(protein) g protein · \(fat) g fat")
         }
+        return String(localized: "\(carbs) g carbs")
     }
 
-    private func generatePresetSummary() -> some View {
-        var counts = [String: Int]()
-
-        for preset in state.summation {
-            counts[preset, default: 0] += 1
-        }
-
-        return VStack(alignment: .leading) {
-            ForEach(counts.sorted(by: { $0.key < $1.key }), id: \.key) { key, value in
-                if value > 0 {
-                    HStack {
-                        Text("\(value) x")
-                            .foregroundColor(.blue)
-                        Text(key)
-                    }
-                }
-            }
-        }
+    private func decimalString(_ value: NSDecimalNumber?) -> String {
+        let number = (value ?? 0) as NSNumber
+        return mealFormatter.string(from: number) ?? "0"
     }
 
-    private func resetValues() {
-        state.selection = nil
-        state.summation.removeAll()
-    }
-
-    private func resetNewPresetForm() {
-        dish = ""
-        presetCarbs = 0
-        presetFat = 0
-        presetProtein = 0
-    }
-
-    private var minusButton: some View {
-        Button {
-            if carbs != 0 {
-                carbs -= (((state.selection?.carbs ?? 0) as NSDecimalNumber) as Decimal)
-            } else { carbs = 0 }
-
-            if state.useFPUconversion {
-                if fat != 0,
-                   (fat - (((state.selection?.fat ?? 0) as NSDecimalNumber) as Decimal) as Decimal) >= 0
-                {
-                    fat -= (((state.selection?.fat ?? 0) as NSDecimalNumber) as Decimal)
-                } else { fat = 0 }
-
-                if protein != 0,
-                   (protein - (((state.selection?.protein ?? 0) as NSDecimalNumber) as Decimal) as Decimal) >= 0
-                {
-                    protein -= (((state.selection?.protein ?? 0) as NSDecimalNumber) as Decimal)
-                } else { protein = 0 }
-            }
-
-            state.removePresetFromNewMeal()
-            if carbs == 0, fat == 0, protein == 0 { state.summation = [] }
-        }
-        label: { Image(systemName: "minus.circle.fill")
-            .font(.title3)
-        }
-        .disabled(
-            state
-                .selection == nil ||
-                (
-                    !state.summation
-                        .contains(state.selection?.dish ?? "") && (state.selection?.dish ?? "") != ""
-                )
-        )
-        .buttonStyle(.borderless)
-        .tint(.blue)
-    }
-
-    private var plusButton: some View {
-        Button {
-            carbs += ((state.selection?.carbs ?? 0) as NSDecimalNumber) as Decimal
-            if state.useFPUconversion {
-                fat += ((state.selection?.fat ?? 0) as NSDecimalNumber) as Decimal
-                protein += ((state.selection?.protein ?? 0) as NSDecimalNumber) as Decimal
-            }
-
-            state.addPresetToNewMeal()
-        }
-        label: { Image(systemName: "plus.circle.fill")
-            .font(.title3)
-        }
-        .disabled(state.selection == nil)
-        .buttonStyle(.borderless)
-        .tint(.blue)
-    }
-
-    private func savePreset() {
-        if dish != "" {
-            let preset = MealPresetStored(context: moc)
-            preset.dish = dish
-            preset.carbs = presetCarbs as NSDecimalNumber
-            if state.useFPUconversion {
-                preset.fat = presetFat as NSDecimalNumber
-                preset.protein = presetProtein as NSDecimalNumber
-            }
-
-            do {
-                guard moc.hasChanges else { return }
-                try moc.save()
-                showAddNewPresetSheet.toggle()
-            } catch let error as NSError {
-                debugPrint("\(DebuggingIdentifiers.failed) Failed to save Meal Preset with error: \(error.userInfo)")
-            }
-        }
+    private func resetCreateForm() {
+        newDish = ""
+        newCarbs = 0
+        newFat = 0
+        newProtein = 0
     }
 }
