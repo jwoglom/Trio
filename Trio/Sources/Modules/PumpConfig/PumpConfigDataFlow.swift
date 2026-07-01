@@ -21,6 +21,7 @@ enum PumpConfig {
             case .omni: return "Omni"
             case .dana: return "Dana"
             case .medtrum: return "Medtrum"
+            case .tandem: return "TandemPumpManager"
             case .simulator: return nil
             }
         }
