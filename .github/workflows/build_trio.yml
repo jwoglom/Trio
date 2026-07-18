@@ -2,6 +2,11 @@ name: 4. Build Trio
 run-name: Build Trio (${{ github.ref_name }})
 on:
   workflow_dispatch:
+    inputs:
+      skip_upstream_sync:
+        description: "Skip syncing upstream changes before building (build the fork as-is)"
+        type: boolean
+        default: false
   schedule:
     # Check for updates every Sunday
     #   Later logic builds if there are updates or if it is the 2nd Sunday of the month
@@ -98,7 +103,8 @@ jobs:
       - name: Sync upstream changes
         if: | # do not run the upstream sync action on the upstream repository
           steps.workflow-permission.outputs.has_permission == 'true' &&
-          vars.SCHEDULED_SYNC != 'false' && github.repository_owner != 'nightscout'
+          vars.SCHEDULED_SYNC != 'false' && github.repository_owner != 'nightscout' &&
+          inputs.skip_upstream_sync != true
         id: sync
         uses: aormsby/Fork-Sync-With-Upstream-action@v3.4.2
         with:
