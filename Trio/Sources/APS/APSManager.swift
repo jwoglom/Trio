@@ -202,6 +202,15 @@ final class BaseAPSManager: APSManager, Injectable {
             .store(in: &lifetime)
         pumpManager?.addStatusObserver(self, queue: processQueue)
 
+        // Re-attach the status observer whenever the pump manager instance is replaced
+        deviceDataManager.pumpManagerDidChange
+            .receive(on: processQueue)
+            .sink { [weak self] in
+                guard let self = self else { return }
+                self.pumpManager?.addStatusObserver(self, queue: self.processQueue)
+            }
+            .store(in: &lifetime)
+
         deviceDataManager.errorSubject
             .receive(on: processQueue)
             .map { APSError.pumpError($0) }
