@@ -21,6 +21,7 @@ protocol DeviceDataManager: GlucoseSource {
     var bluetoothManager: BluetoothStateManager { get }
     var loopInProgress: Bool { get set }
     var pumpDisplayState: CurrentValueSubject<PumpDisplayState?, Never> { get }
+    var pumpManagerDidChange: PassthroughSubject<Void, Never> { get }
     var recommendsLoop: PassthroughSubject<Void, Never> { get }
     var bolusTrigger: CurrentValueSubject<BolusStatus, Never> { get }
     var manualTempBasal: PassthroughSubject<Bool, Never> { get }
@@ -74,6 +75,7 @@ final class BaseDeviceDataManager: DeviceDataManager, Injectable {
         .distantPast
 
     let recommendsLoop = PassthroughSubject<Void, Never>()
+    let pumpManagerDidChange = PassthroughSubject<Void, Never>()
     let bolusTrigger = CurrentValueSubject<BolusStatus, Never>(.noBolus)
     let errorSubject = PassthroughSubject<Error, Never>()
     let pumpNewStatus = PassthroughSubject<Void, Never>()
@@ -94,6 +96,9 @@ final class BaseDeviceDataManager: DeviceDataManager, Injectable {
             if let pumpManager = pumpManager {
                 pumpManager.pumpManagerDelegate = self
                 pumpManager.delegateQueue = processQueue
+
+                // Signal instance-bound observers (e.g. APSManager's status observer) to re-attach.
+                pumpManagerDidChange.send()
 
                 // Re-apply the latest CGM-aligned heartbeat request to a freshly set pump
                 if let heartbeatRequest = lastPumpHeartbeatRequest {
