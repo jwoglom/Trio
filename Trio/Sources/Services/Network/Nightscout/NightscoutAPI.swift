@@ -65,7 +65,7 @@ extension NightscoutAPI {
             .eraseToAnyPublisher()
     }
 
-    func fetchLastGlucose(sinceDate: Date? = nil) async throws -> [BloodGlucose] {
+    func fetchLastGlucose(sinceDate: Date? = nil, untilDate: Date? = nil) async throws -> [BloodGlucose] {
         var components = URLComponents()
         components.scheme = url.scheme
         components.host = url.host
@@ -76,6 +76,13 @@ extension NightscoutAPI {
             let dateItem = URLQueryItem(
                 name: "find[dateString][$gte]",
                 value: Formatter.iso8601withFractionalSeconds.string(from: date)
+            )
+            components.queryItems?.append(dateItem)
+        }
+        if let untilDate = untilDate {
+            let dateItem = URLQueryItem(
+                name: "find[dateString][$lte]",
+                value: Formatter.iso8601withFractionalSeconds.string(from: untilDate)
             )
             components.queryItems?.append(dateItem)
         }
