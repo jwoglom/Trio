@@ -1,10 +1,10 @@
 // Some of the items can be modified to match the user's preference
-APP_DISPLAY_NAME = Trio
+APP_DISPLAY_NAME = TriaTandem
 APP_ICON = trioBlack
 APP_URL_SCHEME = Trio
 
 // DEVELOPER_TEAM will be set to your Apple Developer ID - typically using ConfigOverride.xcconfig
-DEVELOPER_TEAM = ##TEAM_ID##
+DEVELOPER_TEAM = J6493RM3K3
 
 // Typically this is not modified unless you want to create a separate (unique) app using your ID
 // It must include $(DEVELOPMENT_TEAM)
