@@ -21,6 +21,8 @@ extension NightscoutConfig {
         @Published var isValidURL: Bool = false
         @Published var connecting = false
         @Published var backfilling = false
+        @Published var backfillProgress: Double = 0
+        @Published var backfillStatus: BackfillStatus = .idle
         @Published var isUploadEnabled = false // Allow uploads
         @Published var isDownloadEnabled = false // Allow downloads
         @Published var uploadGlucose = true // Upload Glucose
@@ -135,33 +137,80 @@ extension NightscoutConfig {
             return lowTargetValue
         }
 
-        func backfillGlucose() async {
+        enum BackfillStatus: Equatable {
+            case idle
+            case inProgress
+            case complete
+        }
+
+        /// How long the "Backfill complete" state lingers before the progress UI clears itself.
+        private static let backfillCompletionDisplay: TimeInterval = 4
+
+        /// Backfills glucose from Nightscout over the last `days` days.
+        ///
+        /// The range is fetched one day at a time. This keeps each request under the Nightscout
+        /// entries `count` cap (so multi-day ranges aren't silently truncated) and lets us report
+        /// determinate progress. The `.complete` state auto-clears after a short delay so the
+        /// progress UI isn't shown indefinitely.
+        func backfillGlucose(days: Int = 1) async {
+            let days = max(days, 1)
+
             await MainActor.run {
                 backfilling = true
+                backfillStatus = .inProgress
+                backfillProgress = 0
+                message = ""
             }
 
-            let glucose = await nightscoutManager.fetchGlucose(since: Date().addingTimeInterval(-1.days.timeInterval))
+            var hadError = false
 
-            if glucose.isNotEmpty {
-                do {
-                    try await glucoseStorage.storeGlucose(glucose)
+            for day in 0 ..< days {
+                let end = Date().addingTimeInterval(-Double(day) * 1.days.timeInterval)
+                let start = Date().addingTimeInterval(-Double(day + 1) * 1.days.timeInterval)
 
-                    Task.detached {
-                        await self.healthKitManager.uploadGlucose()
+                let glucose = await nightscoutManager.fetchGlucose(since: start, until: end)
+
+                if glucose.isNotEmpty {
+                    do {
+                        try await glucoseStorage.storeGlucose(glucose)
+                    } catch let error as CoreDataError {
+                        debug(.nightscout, "Core Data error while storing backfilled glucose: \(error)")
+                        await MainActor.run { message = "Error: \(error.localizedDescription)" }
+                        hadError = true
+                        break
+                    } catch {
+                        debug(.nightscout, "Unexpected error while storing backfilled glucose: \(error)")
+                        await MainActor.run { message = "Error: \(error.localizedDescription)" }
+                        hadError = true
+                        break
                     }
-                } catch let error as CoreDataError {
-                    debug(.nightscout, "Core Data error while storing backfilled glucose: \(error)")
-                    message = "Error: \(error.localizedDescription)"
-                } catch {
-                    debug(.nightscout, "Unexpected error while storing backfilled glucose: \(error)")
-                    message = "Error: \(error.localizedDescription)"
+                } else {
+                    debug(.nightscout, "No glucose values found or fetched to backfill for day \(day + 1) of \(days).")
                 }
-            } else {
-                debug(.nightscout, "No glucose values found or fetched to backfill.")
+
+                await MainActor.run { backfillProgress = Double(day + 1) / Double(days) }
+            }
+
+            if !hadError {
+                Task.detached {
+                    await self.healthKitManager.uploadGlucose()
+                }
             }
 
             await MainActor.run {
-                self.backfilling = false
+                backfilling = false
+                backfillStatus = hadError ? .idle : .complete
+            }
+
+            guard !hadError else { return }
+
+            // Don't keep the completed progress bar around forever.
+            try? await Task.sleep(for: .seconds(Self.backfillCompletionDisplay))
+            await MainActor.run {
+                if backfillStatus == .complete {
+                    backfillStatus = .idle
+                    backfillProgress = 0
+                }
             }
         }
 
