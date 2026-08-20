@@ -297,6 +297,11 @@ extension Settings {
                                 comment: "Export Settings menu item in Trio Settings Root View"
                             ))
                                 .navigationLink(to: .settingsExport, from: self)
+                            Text(String(
+                                localized: "Export Database",
+                                comment: "Export Database menu item in Trio Settings Root View"
+                            ))
+                                .navigationLink(to: .databaseExport, from: self)
                         }
                     ).listRowBackground(Color.chart)
 

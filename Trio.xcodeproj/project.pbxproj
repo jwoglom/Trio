@@ -624,6 +624,10 @@
 		C2AA6CF72E1A734A00BF6C16 /* SettingsExportProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2AA6CF32E1A734A00BF6C16 /* SettingsExportProvider.swift */; };
 		C2AA6CF82E1A734A00BF6C16 /* SettingsExportDataFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2AA6CF22E1A734A00BF6C16 /* SettingsExportDataFlow.swift */; };
 		C2AA6CF92E1A734A00BF6C16 /* SettingsExportStateModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2AA6CF42E1A734A00BF6C16 /* SettingsExportStateModel.swift */; };
+		DA7ABA5E000000000000A001 /* DatabaseExportRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA7ABA5E000000000000B001 /* DatabaseExportRootView.swift */; };
+		DA7ABA5E000000000000A002 /* DatabaseExportProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA7ABA5E000000000000B003 /* DatabaseExportProvider.swift */; };
+		DA7ABA5E000000000000A003 /* DatabaseExportDataFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA7ABA5E000000000000B002 /* DatabaseExportDataFlow.swift */; };
+		DA7ABA5E000000000000A004 /* DatabaseExportStateModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA7ABA5E000000000000B004 /* DatabaseExportStateModel.swift */; };
 		C2BA6B972F758E7500348E6A /* WatchNotificationHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2BA6B962F758E7500348E6A /* WatchNotificationHandler.swift */; };
 		C2BA6B992F758E7600348E6A /* NotificationIdentifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2BA6B982F758E7600348E6A /* NotificationIdentifiers.swift */; };
 		C2BA6B9A2F7593C300348E6A /* NotificationIdentifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2BA6B982F758E7600348E6A /* NotificationIdentifiers.swift */; };
@@ -1666,6 +1670,10 @@
 		C2AA6CF22E1A734A00BF6C16 /* SettingsExportDataFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsExportDataFlow.swift; sourceTree = "<group>"; };
 		C2AA6CF32E1A734A00BF6C16 /* SettingsExportProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsExportProvider.swift; sourceTree = "<group>"; };
 		C2AA6CF42E1A734A00BF6C16 /* SettingsExportStateModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsExportStateModel.swift; sourceTree = "<group>"; };
+		DA7ABA5E000000000000B001 /* DatabaseExportRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseExportRootView.swift; sourceTree = "<group>"; };
+		DA7ABA5E000000000000B002 /* DatabaseExportDataFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseExportDataFlow.swift; sourceTree = "<group>"; };
+		DA7ABA5E000000000000B003 /* DatabaseExportProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseExportProvider.swift; sourceTree = "<group>"; };
+		DA7ABA5E000000000000B004 /* DatabaseExportStateModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseExportStateModel.swift; sourceTree = "<group>"; };
 		C2BA6B962F758E7500348E6A /* WatchNotificationHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchNotificationHandler.swift; sourceTree = "<group>"; };
 		C2BA6B982F758E7600348E6A /* NotificationIdentifiers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationIdentifiers.swift; sourceTree = "<group>"; };
 		C377490C77661D75E8C50649 /* ManualTempBasalRootView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ManualTempBasalRootView.swift; sourceTree = "<group>"; };
@@ -2335,6 +2343,7 @@
 				9E56E3626FAD933385101B76 /* History */,
 				195D80B22AF696EE00D25097 /* DynamicSettings */,
 				C2AA6CF52E1A734A00BF6C16 /* SettingsExport */,
+				DA7ABA5E000000000000C002 /* DatabaseExport */,
 				DD17454C2C55CA0200211FAC /* GeneralSettings */,
 				BD1179602F4E22C100F90001 /* GlucoseAlerts */,
 				BD11799A2F4E22C100F90001 /* DeviceAlarms */,
@@ -3881,6 +3890,25 @@
 			path = SettingsExport;
 			sourceTree = "<group>";
 		};
+		DA7ABA5E000000000000C001 /* View */ = {
+			isa = PBXGroup;
+			children = (
+				DA7ABA5E000000000000B001 /* DatabaseExportRootView.swift */,
+			);
+			path = View;
+			sourceTree = "<group>";
+		};
+		DA7ABA5E000000000000C002 /* DatabaseExport */ = {
+			isa = PBXGroup;
+			children = (
+				DA7ABA5E000000000000C001 /* View */,
+				DA7ABA5E000000000000B002 /* DatabaseExportDataFlow.swift */,
+				DA7ABA5E000000000000B003 /* DatabaseExportProvider.swift */,
+				DA7ABA5E000000000000B004 /* DatabaseExportStateModel.swift */,
+			);
+			path = DatabaseExport;
+			sourceTree = "<group>";
+		};
 		C2C98283C436DB934D7E7994 /* Treatments */ = {
 			isa = PBXGroup;
 			children = (
@@ -5413,6 +5441,10 @@
 				C2AA6CF72E1A734A00BF6C16 /* SettingsExportProvider.swift in Sources */,
 				C2AA6CF82E1A734A00BF6C16 /* SettingsExportDataFlow.swift in Sources */,
 				C2AA6CF92E1A734A00BF6C16 /* SettingsExportStateModel.swift in Sources */,
+				DA7ABA5E000000000000A001 /* DatabaseExportRootView.swift in Sources */,
+				DA7ABA5E000000000000A002 /* DatabaseExportProvider.swift in Sources */,
+				DA7ABA5E000000000000A003 /* DatabaseExportDataFlow.swift in Sources */,
+				DA7ABA5E000000000000A004 /* DatabaseExportStateModel.swift in Sources */,
 				3811DE4325C9D4A100A708ED /* SettingsProvider.swift in Sources */,
 				45252C95D220E796FDB3B022 /* ConfigEditorDataFlow.swift in Sources */,
 				CE7CA34E2A064973004BE681 /* AppShortcuts.swift in Sources */,
