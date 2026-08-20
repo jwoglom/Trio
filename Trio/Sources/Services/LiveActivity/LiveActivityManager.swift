@@ -234,6 +234,34 @@ final class LiveActivityData: ObservableObject {
         }
     }
 
+    /// Trims a content state down to a size ActivityKit will accept.
+    ///
+    /// ActivityKit rejects any content state over 4 KB of JSON with "Payload maximum
+    /// size exceeded". Because `Activity.update(_:)` does not throw, a rejected update
+    /// leaves the activity showing whatever it last accepted — for a freshly created
+    /// activity that is the `isInitialState` placeholder, i.e. a permanent
+    /// "Live Activity Expired" on the lock screen. Shedding detail keeps the activity
+    /// live instead.
+    private func fittedToPayloadLimit(_ state: LiveActivityAttributes.ContentState) -> LiveActivityAttributes
+        .ContentState
+    {
+        let size = state.encodedPayloadSize
+        let points = state.detailedViewState.chartValues.count
+
+        guard size > LiveActivityAttributes.ContentState.maxPayloadBytes else {
+            debug(.default, "[LiveActivityManager] Payload \(size) bytes, \(points) chart points")
+            return state
+        }
+
+        let fitted = state.fittedToPayloadLimit()
+        debug(
+            .default,
+            "[LiveActivityManager] Payload too large: \(size) bytes for \(points) chart points; reduced to "
+                + "\(fitted.encodedPayloadSize) bytes and \(fitted.detailedViewState.chartValues.count) chart points"
+        )
+        return fitted
+    }
+
     /// Pushes an update to the live activity with the specified content state.
     ///
     /// If an existing activity requires recreation or is outdated, this method ends it and starts a new one.
@@ -275,7 +303,7 @@ final class LiveActivityData: ObservableObject {
                 await pushUpdate(state)
             } else {
                 let content = ActivityContent(
-                    state: state,
+                    state: fittedToPayloadLimit(state),
                     staleDate: min(state.date ?? Date.now, Date.now).addingTimeInterval(360)
                 )
                 // Before the update, check if currentActivity is still valid
@@ -340,7 +368,7 @@ final class LiveActivityData: ObservableObject {
 
                 // Update the newly created activity with actual data
                 let updateContent = ActivityContent(
-                    state: state,
+                    state: fittedToPayloadLimit(state),
                     staleDate: Date.now.addingTimeInterval(5 * 60)
                 )
                 await activity.update(updateContent)

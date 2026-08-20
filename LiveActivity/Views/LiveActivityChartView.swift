@@ -28,8 +28,8 @@ struct LiveActivityChartView: View {
         let maxThreshhold: Decimal = isWatchOS ? 220 : 300
 
         // Determine scale, accounting for both glucose history and prediction values
-        let chartMin = additionalState.chart.min(by: { $0.value < $1.value })?.value ?? 39
-        let chartMax = additionalState.chart.max(by: { $0.value < $1.value })?.value ?? maxThreshhold
+        let chartMin = additionalState.chartValues.min().map { Decimal($0) } ?? 39
+        let chartMax = additionalState.chartValues.max().map { Decimal($0) } ?? maxThreshhold
         let forecastMin = additionalState.minForecast.min().map { Decimal($0) } ?? chartMin
         let forecastMax = min(additionalState.maxForecast.max().map { Decimal($0) } ?? chartMax, maxThreshhold)
         let minValue = min(min(chartMin, forecastMin), 39)

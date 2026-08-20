@@ -102,8 +102,14 @@ extension LiveActivityAttributes.ContentState {
         let trendString = bg.direction?.symbol as? String
         let change = Self.calculateChange(chart: chart, units: units)
 
+        // Only the detailed lock screen and Smart Stack layouts draw the chart and the
+        // forecast, and both are expensive in a payload capped at 4 KB — leave them out
+        // when nothing renders them.
+        let usesChart = settings.lockScreenView == .detailed || settings.smartStackView == .detailed
+        let usesForecast = usesChart && settings.displayGlucoseForecasts
+
         let detailedState = LiveActivityAttributes.ContentAdditionalState(
-            chart: chart.map { LiveActivityAttributes.ChartItem(value: Decimal($0.glucose), date: $0.date) },
+            chart: usesChart ? chart.map { LiveActivityAttributes.ChartItem(value: Decimal($0.glucose), date: $0.date) } : [],
             rotationDegrees: rotationDegrees,
             cob: Decimal(determination?.cob ?? 0),
             iob: iob ?? 0 as Decimal,
@@ -119,11 +125,11 @@ extension LiveActivityAttributes.ContentState {
             tempTargetDuration: tempTarget?.duration ?? 0,
             tempTargetTarget: tempTarget?.target ?? 0,
             widgetItems: widgetItems ?? [], // set empty array here to silence compiler; this can never be nil
-            minForecast: settings.displayGlucoseForecasts && settings.forecastDisplayType == .cone
+            minForecast: usesForecast && settings.forecastDisplayType == .cone
                 ? (determination?.minForecast ?? []) : [],
-            maxForecast: settings.displayGlucoseForecasts && settings.forecastDisplayType == .cone
+            maxForecast: usesForecast && settings.forecastDisplayType == .cone
                 ? (determination?.maxForecast ?? []) : [],
-            forecastLines: settings.displayGlucoseForecasts && settings.forecastDisplayType == .lines
+            forecastLines: usesForecast && settings.forecastDisplayType == .lines
                 ? (determination?.forecastLines ?? [])
                 .map { LiveActivityAttributes.ForecastLine(type: $0.type, values: $0.values) }
                 : [],
