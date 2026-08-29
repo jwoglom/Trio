@@ -1,4 +1,4 @@
-name: Algorithm tests (Linux)
+name: zzz [DO NOT RUN] Algorithm tests on Linux
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -17,7 +17,7 @@ on:
       - 'Trio/Sources/Models/**'
       - 'Trio/Sources/Helpers/**'
       - 'TrioTests/OpenAPSSwiftTests/**'
-      - '.github/workflows/algorithm-tests.yml'
+      - '.github/workflows/algorithm_tests.yml'
   push:
     branches:
       - main
@@ -29,12 +29,11 @@ on:
       - 'Trio/Sources/Models/**'
       - 'Trio/Sources/Helpers/**'
       - 'TrioTests/OpenAPSSwiftTests/**'
-      - '.github/workflows/algorithm-tests.yml'
-  workflow_dispatch:
+      - '.github/workflows/algorithm_tests.yml'
 
 jobs:
   algorithm-tests:
-    name: swift test (AlgorithmPackage)
+    name: Algorithm Package (swift test, Linux)
     runs-on: ubuntu-latest
     container: swift:6.1.2-noble
     timeout-minutes: 20
