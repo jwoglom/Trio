@@ -8,10 +8,40 @@ on:
   pull_request:
     branches:
       - dev
+    paths:
+      # Manifest + the symlinks that define the package.
+      - 'AlgorithmPackage/**'
+      # Everything Package.swift compiles into the `Trio` target. Listed as
+      # directories rather than the manifest's exact file enumeration: a file
+      # added to `algorithmModels`/`algorithmHelpers` is then covered without
+      # having to remember to update this list too.
+      - 'Trio/Sources/APS/OpenAPSSwift/**'
+      - 'Trio/Sources/APS/Extensions/DecimalExtensions.swift'
+      - 'Trio/Sources/Models/**'
+      - 'Trio/Sources/Helpers/**'
+      # The test target.
+      - 'TrioTests/OpenAPSSwiftTests/**'
+      # This workflow itself, so changes to the job are exercised by the job.
+      - '.github/workflows/algorithm-tests.yml'
   push:
     branches:
       - main
       - dev
+    paths:
+      # Manifest + the symlinks that define the package.
+      - 'AlgorithmPackage/**'
+      # Everything Package.swift compiles into the `Trio` target. Listed as
+      # directories rather than the manifest's exact file enumeration: a file
+      # added to `algorithmModels`/`algorithmHelpers` is then covered without
+      # having to remember to update this list too.
+      - 'Trio/Sources/APS/OpenAPSSwift/**'
+      - 'Trio/Sources/APS/Extensions/DecimalExtensions.swift'
+      - 'Trio/Sources/Models/**'
+      - 'Trio/Sources/Helpers/**'
+      # The test target.
+      - 'TrioTests/OpenAPSSwiftTests/**'
+      # This workflow itself, so changes to the job are exercised by the job.
+      - '.github/workflows/algorithm-tests.yml'
   workflow_dispatch:
 
 jobs:
