@@ -9,38 +9,26 @@ on:
     branches:
       - dev
     paths:
-      # Manifest + the symlinks that define the package.
+      # AlgorithmPackage/Sources is a symlink, so the real directories the
+      # manifest compiles have to be listed too.
       - 'AlgorithmPackage/**'
-      # Everything Package.swift compiles into the `Trio` target. Listed as
-      # directories rather than the manifest's exact file enumeration: a file
-      # added to `algorithmModels`/`algorithmHelpers` is then covered without
-      # having to remember to update this list too.
       - 'Trio/Sources/APS/OpenAPSSwift/**'
       - 'Trio/Sources/APS/Extensions/DecimalExtensions.swift'
       - 'Trio/Sources/Models/**'
       - 'Trio/Sources/Helpers/**'
-      # The test target.
       - 'TrioTests/OpenAPSSwiftTests/**'
-      # This workflow itself, so changes to the job are exercised by the job.
       - '.github/workflows/algorithm-tests.yml'
   push:
     branches:
       - main
       - dev
     paths:
-      # Manifest + the symlinks that define the package.
       - 'AlgorithmPackage/**'
-      # Everything Package.swift compiles into the `Trio` target. Listed as
-      # directories rather than the manifest's exact file enumeration: a file
-      # added to `algorithmModels`/`algorithmHelpers` is then covered without
-      # having to remember to update this list too.
       - 'Trio/Sources/APS/OpenAPSSwift/**'
       - 'Trio/Sources/APS/Extensions/DecimalExtensions.swift'
       - 'Trio/Sources/Models/**'
       - 'Trio/Sources/Helpers/**'
-      # The test target.
       - 'TrioTests/OpenAPSSwiftTests/**'
-      # This workflow itself, so changes to the job are exercised by the job.
       - '.github/workflows/algorithm-tests.yml'
   workflow_dispatch:
 
@@ -53,19 +41,15 @@ jobs:
     if: github.repository_owner == 'nightscout'
 
     env:
-      # The golden-parity suite is gated on the process running in the zone the
-      # goldens were recorded in (ParityEnv.timeZoneIdentifier); without this it
-      # silently skips. Pinning it from the job env is the documented mechanism —
-      # the suites run in parallel, so a test cannot set it in-process.
+      # The golden parity suite self-skips unless the process runs in the zone
+      # the goldens were recorded in (ParityEnv.timeZoneIdentifier).
       TZ: Europe/Berlin
 
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
-          # AlgorithmPackage declares no package dependencies and compiles only
-          # files under Trio/Sources — nothing from LoopKit/ or the other
-          # submodules. Verified: it builds and tests with none of them checked out.
+          # The package has no dependencies outside Trio/Sources.
           submodules: false
 
       - name: Show Swift version
@@ -76,44 +60,24 @@ jobs:
           set -o pipefail
           swift test --package-path AlgorithmPackage 2>&1 | tee swift-test.log
 
-      # A suite that silently stops being discovered still exits 0.
-      # Insist on a positive test count so "green" cannot mean "nothing ran".
+      # `swift test` exits 0 if the suite stops being discovered, and the test
+      # count is the same whether the parity suite runs or skips.
       - name: Check that tests actually ran
         run: |
           set -euo pipefail
           COUNT="$(grep -oE 'Test run with [0-9]+ tests' swift-test.log \
                    | grep -oE '[0-9]+' | sort -rn | head -1 || true)"
           if [[ -z "${COUNT}" || "${COUNT}" -lt 200 ]]; then
-            echo "::error title=Algorithm tests::Expected 200+ algorithm tests, found: ${COUNT:-none}"
+            echo "::error title=Algorithm tests::Expected 200+ tests, found: ${COUNT:-none}"
             exit 1
           fi
-          # The golden-parity suite self-skips when TZ is not the recorded zone.
-          # If the container ever ships without tzdata that skip would be silent,
-          # so fail loudly instead of quietly losing the parity coverage.
           if grep -q 'golden parity" skipped' swift-test.log; then
-            echo "::error title=Algorithm tests::Golden parity suite skipped -- TZ pinning did not take effect (missing tzdata?)"
+            echo "::error title=Algorithm tests::Golden parity suite skipped; TZ pinning did not take effect"
             exit 1
           fi
           echo "AlgorithmPackage: ${COUNT} tests executed (TZ=${TZ})." >> "${GITHUB_STEP_SUMMARY}"
 
-      - name: Explain a failure
-        if: failure()
-        run: |
-          {
-            echo "## ❌ Algorithm package (\`swift test\`) failed on Linux"
-            echo ""
-            echo "\`AlgorithmPackage/Package.swift\` enumerates its sources by hand, so it"
-            echo "drifts when a listed file gains a dependency on a file that is not listed."
-            echo "If the error is \`cannot find 'X' in scope\`, add the file declaring \`X\`"
-            echo "to \`algorithmModels\` or \`algorithmHelpers\` in that manifest."
-            echo ""
-            echo "If the error names a Foundation API that is \"not supported in"
-            echo "swift-corelibs-foundation\", guard it with \`#if canImport(Darwin)\` and add"
-            echo "a Linux branch — see \`Trio/Sources/Helpers/LinuxCompat.swift\` and"
-            echo "\`Formatters.timeFor(minutes:)\`."
-          } >> "${GITHUB_STEP_SUMMARY}"
-
-      - name: Upload test log (on failure)
+      - name: Upload test log
         if: failure()
         uses: actions/upload-artifact@v4
         with:
