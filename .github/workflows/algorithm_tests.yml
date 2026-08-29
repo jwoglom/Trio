@@ -5,9 +5,8 @@ concurrency:
   cancel-in-progress: true
 
 on:
+  # Any PR that touches algorithm code, whatever branch it targets.
   pull_request:
-    branches:
-      - dev
     paths:
       # AlgorithmPackage/Sources is a symlink, so the real directories the
       # manifest compiles have to be listed too.
