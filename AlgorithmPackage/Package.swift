@@ -40,6 +40,7 @@ let algorithmModels = [
 ].map { "Models/\($0).swift" }
 
 let algorithmHelpers = [
+    "LinuxCompat",
     "ConvenienceExtensions",
     "Decimal+Extensions",
     "Formatters",

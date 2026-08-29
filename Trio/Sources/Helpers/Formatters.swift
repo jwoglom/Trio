@@ -8,10 +8,16 @@ enum Formatters {
     }
 
     static func timeFor(minutes: Int) -> String {
-        let formater = DateComponentsFormatter()
-        formater.unitsStyle = .abbreviated
-        formater.allowedUnits = [.hour, .minute]
-        return formater.string(from: TimeInterval(minutes * 60))!
+        #if canImport(Darwin)
+            let formater = DateComponentsFormatter()
+            formater.unitsStyle = .abbreviated
+            formater.allowedUnits = [.hour, .minute]
+            return formater.string(from: TimeInterval(minutes * 60))!
+        #else
+            // swift-corelibs-foundation has no DateComponentsFormatter.
+            let (h, m) = (minutes / 60, minutes % 60)
+            return h > 0 ? (m > 0 ? "\(h)h \(m)m" : "\(h)h") : "\(m)m"
+        #endif
     }
 }
 
