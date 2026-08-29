@@ -1,0 +1,1 @@
+../../TrioTests/NightscoutUploadSerializerTests.swift

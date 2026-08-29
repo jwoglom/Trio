@@ -1,11 +1,11 @@
-name: zzz [DO NOT RUN] Algorithm tests on Linux
+name: zzz [DO NOT RUN] Unit tests on Linux
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 on:
-  # Any PR that touches algorithm code, whatever branch it targets.
+  # Any PR that touches code this job compiles, whatever branch it targets.
   pull_request:
     paths:
       # AlgorithmPackage/Sources is a symlink, so the real directories the
@@ -15,24 +15,32 @@ on:
       - 'Trio/Sources/APS/Extensions/DecimalExtensions.swift'
       - 'Trio/Sources/Models/**'
       - 'Trio/Sources/Helpers/**'
-      - 'TrioTests/OpenAPSSwiftTests/**'
-      - '.github/workflows/algorithm_tests.yml'
+      - 'Trio/Sources/Services/Alerts/**'
+      - 'Trio/Sources/Services/Network/**'
+      - 'Trio/Sources/Modules/Home/View/MultiUsePanelState.swift'
+      - 'TrioTests/**'
+      - '.github/workflows/linux_tests.yml'
   push:
     branches:
       - main
       - dev
     paths:
+      # AlgorithmPackage/Sources is a symlink, so the real directories the
+      # manifest compiles have to be listed too.
       - 'AlgorithmPackage/**'
       - 'Trio/Sources/APS/OpenAPSSwift/**'
       - 'Trio/Sources/APS/Extensions/DecimalExtensions.swift'
       - 'Trio/Sources/Models/**'
       - 'Trio/Sources/Helpers/**'
-      - 'TrioTests/OpenAPSSwiftTests/**'
-      - '.github/workflows/algorithm_tests.yml'
+      - 'Trio/Sources/Services/Alerts/**'
+      - 'Trio/Sources/Services/Network/**'
+      - 'Trio/Sources/Modules/Home/View/MultiUsePanelState.swift'
+      - 'TrioTests/**'
+      - '.github/workflows/linux_tests.yml'
 
 jobs:
-  algorithm-tests:
-    name: Algorithm Package (swift test, Linux)
+  linux-tests:
+    name: Unit tests (swift test, Linux)
     runs-on: ubuntu-latest
     container: swift:6.1.2-noble
     timeout-minutes: 20
@@ -65,19 +73,19 @@ jobs:
           set -euo pipefail
           COUNT="$(grep -oE 'Test run with [0-9]+ tests' swift-test.log \
                    | grep -oE '[0-9]+' | sort -rn | head -1 || true)"
-          if [[ -z "${COUNT}" || "${COUNT}" -lt 200 ]]; then
-            echo "::error title=Algorithm tests::Expected 200+ tests, found: ${COUNT:-none}"
+          if [[ -z "${COUNT}" || "${COUNT}" -lt 270 ]]; then
+            echo "::error title=Unit tests (Linux)::Expected 270+ tests, found: ${COUNT:-none}"
             exit 1
           fi
           if grep -q 'golden parity" skipped' swift-test.log; then
-            echo "::error title=Algorithm tests::Golden parity suite skipped; TZ pinning did not take effect"
+            echo "::error title=Unit tests (Linux)::Golden parity suite skipped; TZ pinning did not take effect"
             exit 1
           fi
-          echo "AlgorithmPackage: ${COUNT} tests executed (TZ=${TZ})." >> "${GITHUB_STEP_SUMMARY}"
+          echo "Linux unit tests: ${COUNT} tests executed (TZ=${TZ})." >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Upload test log
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: algorithm-test-log
+          name: linux-test-log
           path: swift-test.log

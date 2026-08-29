@@ -1,0 +1,1 @@
+../../TrioTests/CoreDataTests/MultiUsePanelStateTests.swift

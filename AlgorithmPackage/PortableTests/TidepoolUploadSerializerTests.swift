@@ -1,0 +1,1 @@
+../../TrioTests/TidepoolUploadSerializerTests.swift

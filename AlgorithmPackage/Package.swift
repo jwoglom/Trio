@@ -51,6 +51,23 @@ let algorithmHelpers = [
     "TimeInterval+Convenience"
 ].map { "Helpers/\($0).swift" }
 
+// Units outside the algorithm that are Foundation-only, so they build and test
+// on Linux too. Kept as a separate list from the algorithm's own sources: the
+// algorithm suite is what gates dosing changes, this is everything else that
+// happens to be portable.
+let portableSources = [
+    "Models/GlucoseAlerts/DayNightOptions.swift",
+    "Models/GlucoseAlerts/DeviceAlertSeverity.swift",
+    "Models/GlucoseAlerts/GlucoseAlert.swift",
+    "Models/GlucoseAlerts/GlucoseAlertConfiguration.swift",
+    "Models/GlucoseAlerts/GlucoseAlertType.swift",
+    "Modules/Home/View/MultiUsePanelState.swift",
+    "Services/Alerts/ForecastedGlucoseEvaluator.swift",
+    "Services/Network/Nightscout/NightscoutUploadPipeline.swift",
+    "Services/Network/Nightscout/NightscoutUploadSerializer.swift",
+    "Services/Network/TidepoolUploadSerializer.swift"
+]
+
 let package = Package(
     name: "TrioAlgorithm",
     defaultLocalization: "en",
@@ -65,7 +82,7 @@ let package = Package(
             sources: [
                 "APS/OpenAPSSwift",
                 "APS/Extensions/DecimalExtensions.swift"
-            ] + algorithmModels + algorithmHelpers,
+            ] + algorithmModels + algorithmHelpers + portableSources,
             swiftSettings: [.define("TRIO_ALGORITHM_PACKAGE")]
         ),
         .testTarget(
@@ -75,6 +92,15 @@ let package = Package(
             // goldens are read from disk via #filePath, not from the test bundle
             exclude: ["Parity/goldens"],
             resources: [.copy("json")],
+            swiftSettings: [.define("TRIO_ALGORITHM_PACKAGE")]
+        ),
+        // Tests for the portable non-algorithm units. Each file is a symlink to
+        // the real test under TrioTests/, so there is one copy and the app test
+        // target keeps running the same tests.
+        .testTarget(
+            name: "PortableTests",
+            dependencies: ["Trio"],
+            path: "PortableTests",
             swiftSettings: [.define("TRIO_ALGORITHM_PACKAGE")]
         )
     ]
