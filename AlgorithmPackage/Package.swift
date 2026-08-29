@@ -1,8 +1,18 @@
 // swift-tools-version:5.9
 import PackageDescription
 
-// Builds the oref algorithm as a standalone, macOS-capable module
-// so the algorithm test suite can run with `swift test`
+// Builds the oref algorithm as a standalone, macOS- and Linux-capable
+// module so the algorithm test suite can run with `swift test`
+//
+// It also compiles a handful of units that are not algorithm code but
+// depend on the same models (Determination, PumpHistoryEvent,
+// BloodGlucose) and are otherwise Foundation-only — see
+// `portableSources`. They live here rather than in a package of their
+// own because the app is a single Swift module named `Trio` and every
+// test does `@testable import Trio`: a sibling package would have to
+// declare a second target of the same name and recompile 12 of these
+// same files into it. The two test targets stay separate so an
+// algorithm failure is still easy to pick out.
 //
 // This is a "shadow" package: it compiles the *existing* files in
 // place rather than owning its own copy, so there is exactly one
