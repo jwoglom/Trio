@@ -389,10 +389,14 @@ final class TelemetryClient: Injectable {
         TelemetryRequestContext(
             reason: reason.rawValue,
             lastFailureReason: PropertyPersistentFlags.shared.telemetryLastFailureReason,
-            trioVersion: (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ??
-                Bundle.main.appDevVersion ?? "unknown",
+            trioVersion: trioVersion(),
             installID: installId()
         )
+    }
+
+    private func trioVersion() -> String {
+        (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ??
+            Bundle.main.appDevVersion ?? "unknown"
     }
 
     private func sendAnonymous(reason: SendReason) async -> Bool {
