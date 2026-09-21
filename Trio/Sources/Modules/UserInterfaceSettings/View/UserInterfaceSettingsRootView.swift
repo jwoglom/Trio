@@ -609,7 +609,7 @@ extension UserInterfaceSettings {
                                     selectedVerboseHint =
                                         AnyView(
                                             Text(
-                                                "Choose what the statistics panel on the home screen shows by default. Tapping the panel always opens the full statistics view.\n\nTime in Range: your time in range percentage with a glucose distribution bar.\n\nDistribution Bar Only: just the glucose distribution bar, without the percentage.\n\nAverages: your average glucose and GMI (Glucose Management Index).\n\nLooping Performance: the share of glucose readings that Trio looped on, as a bar.\n\nTotal Daily Dose: the insulin delivered and the carbs entered.\n\nNone: no statistics, just a link to the statistics view."
+                                                "Choose what the statistics panel on the home screen shows by default. Tapping the panel always opens the full statistics view.\n\nTime in Range: your time in range percentage with a glucose distribution bar.\n\nDistribution Bar Only: just the glucose distribution bar, without the percentage.\n\nAverages: your average glucose and GMI (Glucose Management Index).\n\nLooping Performance: the share of glucose readings that Trio looped on, as a bar.\n\nTotal Daily Dose: the insulin delivered and the carbs entered.\n\nHide Statistics: shows no data at all, just a \"View Statistics\" shortcut."
                                             )
                                         )
                                     shouldDisplayHint.toggle()

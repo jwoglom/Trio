@@ -43,7 +43,7 @@ extension Home.StateModel {
         let face = settingsManager?.settings.homeStatsPanelFace ?? .timeInRange
 
         // Nothing to show, so nothing to fetch.
-        guard face != .none else { return }
+        guard face != .hidden else { return }
 
         Task { [weak self] in
             guard let self else { return }

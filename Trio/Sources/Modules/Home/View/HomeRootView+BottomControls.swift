@@ -634,13 +634,19 @@ extension Home.RootView {
                                 .frame(height: 6)
                         }
                     case .averages:
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text("\u{2300} \(rangeAverageString) \u{00B7} GMI \(rangeGMIString)")
-                                .font(.subheadline).fontWeight(.semibold)
-                                .foregroundStyle(.primary)
+                        VStack(alignment: .leading, spacing: 6) {
+                            // "⌀" read as a diameter sign, so spell the label out (#1474)
+                            (
+                                Text("Avg. Glucose:", comment: "Stats banner label")
+                                    + Text(" \(rangeAverageString) \u{00B7} GMI \(rangeGMIString)")
+                            )
+                            .font(.subheadline).fontWeight(.semibold)
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                             Text(String(
-                                localized: "\(range.possessiveName) average",
-                                comment: "Stats banner subtitle, e.g. Today's average"
+                                localized: "\(range.possessiveName) Average",
+                                comment: "Stats banner subtitle, e.g. Today's Average"
                             ))
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -660,7 +666,7 @@ extension Home.RootView {
                                 .frame(height: 6)
                         }
                     case .totalDailyDose:
-                        VStack(alignment: .leading, spacing: 1) {
+                        VStack(alignment: .leading, spacing: 6) {
                             Text(
                                 "Insulin delivered: \(rangeInsulinString) U \u{00B7} Total carbs: \(rangeCarbsString) g"
                             )
@@ -675,10 +681,10 @@ extension Home.RootView {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         }
-                    case .none:
-                        Text("View Statistics", comment: "Stats banner title when statistics are hidden")
+                    case .hidden:
+                        Text("View Statistics", comment: "Stats banner hidden face")
                             .font(.subheadline).fontWeight(.semibold)
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(.secondary)
                     }
 
                     Spacer(minLength: 8)
@@ -704,6 +710,7 @@ extension Home.RootView {
             lastGlucoseDate: state.glucoseFromPersistence.last?.date,
             maxIOB: state.maxIOB,
             hasUnacknowledgedReleaseNotes: releaseNotesService.hasUnacknowledgedNotes,
+            dosingMode: state.dosingMode,
             now: state.timerDate
         )
     }
@@ -812,9 +819,23 @@ extension Home.RootView {
             ) {
                 showReleaseNotes = true
             }
+        case let .dosingModeLimited(mode):
+            panelBanner(
+                systemImage: mode.icon,
+                title: mode.displayName,
+                subtitle: mode.miniHint,
+                tint: .orange
+            ) {
+                openDosingModeSetting()
+            }
         case .stats:
             statsBanner()
         }
+    }
+
+    /// The mode picker sits on the Settings root, so there is no sub-screen target to push.
+    func openDosingModeSetting() {
+        selectedTab = 3
     }
 
     func openMaxIOBSetting() {

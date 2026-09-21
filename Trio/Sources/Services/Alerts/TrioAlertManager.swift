@@ -59,6 +59,10 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
     /// Preferred audible channel on iOS 26+. Falls back to `criticalAudioPlayer`
     /// when AlarmKit is unavailable or the user hasn't authorized it.
     @MainActor private var alarmScheduler: CriticalAlertAlarmScheduler?
+    /// Mirror of `CriticalAlertAlarmScheduler.isAuthorizedAndAvailable`, read
+    /// off the main actor so `issueAlert` can decide synchronously whether
+    /// AlarmKit will sound this alert.
+    private var alarmKitAvailable = false
 
     let modalScheduler: TrioModalAlertScheduler
     private let userNotificationScheduler: TrioUserNotificationAlertScheduler
@@ -92,6 +96,15 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
             muter.mute(for: until.timeIntervalSinceNow)
         }
 
+        // Seed AlarmKit availability now; `didBecomeActive` refreshes it later.
+        // Without this an alarm firing before the first foreground would get
+        // both the notification sound and the AlarmKit alarm.
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            if alarmScheduler == nil { alarmScheduler = CriticalAlertAlarmScheduler() }
+            alarmKitAvailable = alarmScheduler?.isAuthorizedAndAvailable ?? false
+        }
+
         // AlarmKit's Stop button runs an AppIntent in a fresh process slice
         // with no reference to this manager, so it routes through the shared
         // bridge. Register here; taps queued before this point are flushed.
@@ -114,6 +127,12 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
     }
 
     @objc private func reconcileBannersWithDeliveredNotifications() {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            if alarmScheduler == nil { alarmScheduler = CriticalAlertAlarmScheduler() }
+            alarmKitAvailable = alarmScheduler?.isAuthorizedAndAvailable ?? false
+        }
+
         let center = UNUserNotificationCenter.current()
         center.getNotificationSettings { [weak self] settings in
             // Without authorization nothing is ever "delivered", so a missing
@@ -191,6 +210,12 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
         )
 
         let now = Date()
+        let fireDate: Date
+        switch alert.trigger {
+        case .immediate: fireDate = now
+        case let .delayed(interval),
+             let .repeating(interval): fireDate = now.addingTimeInterval(interval)
+        }
 
         // Catalog-known alerts (pump, CGM lifecycle, Trio algorithm) get the
         // user's Device Alarms tier config applied — tone, Play Sound,
@@ -205,7 +230,7 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
             guard let tier = DeviceAlertSeverity(level: entry.interruptionLevel) else { return }
 
             // Per-tier snooze. Critical tier ignores snooze.
-            if tier != .critical, DeviceAlertsStore.shared.isTierSnoozed(tier, at: now) {
+            if tier != .critical, DeviceAlertsStore.shared.isTierSnoozed(tier, at: fireDate) {
                 debug(.service, "TrioAlertManager dropped \(alert.identifier.value): tier \(tier) snoozed")
                 return
             }
@@ -226,7 +251,7 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
         // Critical alerts pierce the snooze/mute window. Everything else is
         // suppressed entirely while muted (no modal, no UN sound, no critical
         // audio fallback).
-        if effective.interruptionLevel != .critical, muter.shouldMute(at: now) {
+        if effective.interruptionLevel != .critical, muter.shouldMute(at: fireDate) {
             debug(.service, "TrioAlertManager muted \(effective.identifier.value) (snooze window active)")
             return
         }
@@ -240,10 +265,17 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
         recordIssued(effective)
         let muted = muter.shouldMute(at: now)
         modalScheduler.schedule(effective)
+        // AlarmKit sounds critical alerts itself; posting the notification with
+        // a sound too would play the tone twice, at once.
+        let alarmKitWillSound = alarmKitAvailable
+            && effective.interruptionLevel == .critical
+            && effective.sound?.filename != nil
+            && !muted
         userNotificationScheduler.schedule(
             effective,
             muted: muted,
-            soundURL: soundLoader.url(for: effective)
+            soundURL: soundLoader.url(for: effective),
+            silenced: alarmKitWillSound
         )
         // `.delayed`/`.repeating` alerts start their audio when the timer
         // fires (`alertDidFire`), not now — this is only their arm time.
@@ -384,6 +416,25 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
         }
     }
 
+    private func clearPendingNonCriticalNotificationsAndWait() async {
+        await withCheckedContinuation { continuation in
+            let center = UNUserNotificationCenter.current()
+            center.getPendingNotificationRequests { requests in
+                let ids = requests
+                    .filter { $0.content.interruptionLevel != .critical }
+                    .map(\.identifier)
+                if !ids.isEmpty { center.removePendingNotificationRequests(withIdentifiers: ids) }
+                center.getDeliveredNotifications { delivered in
+                    let ids = delivered
+                        .filter { $0.request.content.interruptionLevel != .critical }
+                        .map(\.request.identifier)
+                    if !ids.isEmpty { center.removeDeliveredNotifications(withIdentifiers: ids) }
+                    continuation.resume()
+                }
+            }
+        }
+    }
+
     func clearPendingNonCriticalNotifications() {
         let center = UNUserNotificationCenter.current()
         center.getPendingNotificationRequests { requests in
@@ -420,7 +471,7 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
 
         if duration > 0 {
             muter.mute(for: duration)
-            clearPendingNonCriticalNotifications()
+            await clearPendingNonCriticalNotificationsAndWait()
             modalScheduler.clearNonCriticalBanners()
         } else {
             muter.unmute()
@@ -487,6 +538,7 @@ extension BaseTrioAlertManager: TrioModalAlertResponder, TrioUserNotificationAle
                   let tier = DeviceAlertSeverity(level: entry.interruptionLevel),
                   tier != .critical
         {
+            guard !entry.concept.isEscalationStep else { return }
             DeviceAlertsStore.shared.snoozeTier(tier, until: untilDate)
             dismissAlertsInTier(tier, excluding: identifier)
         } else {
@@ -504,6 +556,7 @@ extension BaseTrioAlertManager: TrioModalAlertResponder, TrioUserNotificationAle
             liveAlerts.compactMap { id, _ in
                 guard id != excluding,
                       let entry = AlertCatalogRegistry.lookup(id),
+                      !entry.concept.isEscalationStep,
                       DeviceAlertSeverity(level: entry.interruptionLevel) == tier
                 else { return nil }
                 return id
@@ -552,13 +605,6 @@ enum AlertUserInfoKey: String {
 final class AlertMuter: ObservableObject {
     @Published private(set) var startDate: Date?
     @Published private(set) var duration: TimeInterval = 0
-
-    static let allowedDurations: [TimeInterval] = [
-        30 * 60,
-        60 * 60,
-        2 * 60 * 60,
-        4 * 60 * 60
-    ]
 
     func mute(for duration: TimeInterval, from start: Date = Date()) {
         startDate = start

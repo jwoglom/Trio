@@ -7,7 +7,7 @@ enum HomeStatsPanelFace: String, JSON, CaseIterable, Identifiable, Codable, Hash
     case averages
     case loopingPerformance
     case totalDailyDose
-    case none
+    case hidden
 
     var displayName: String {
         switch self {
@@ -21,8 +21,8 @@ enum HomeStatsPanelFace: String, JSON, CaseIterable, Identifiable, Codable, Hash
             return String(localized: "Looping Performance", comment: "Home stats panel face option")
         case .totalDailyDose:
             return String(localized: "Total Daily Dose", comment: "Home stats panel face option")
-        case .none:
-            return String(localized: "None", comment: "Home stats panel face option")
+        case .hidden:
+            return String(localized: "Hide Statistics", comment: "Home stats panel face option")
         }
     }
 }
