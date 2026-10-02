@@ -44,25 +44,25 @@ extension Notification.Name {
     // Dependencies Assembler
     // contain all dependencies Assemblies
     // TODO: Remove static key after update "Use Dependencies" logic
-    private static var assembler = Assembler([
-        StorageAssembly(),
-        ServiceAssembly(),
-        APSAssembly(),
-        NetworkAssembly(),
-        UIAssembly(),
-        SecurityAssembly()
-    ], parent: nil, defaultObjectScope: .container)
-
-    // Simple thread-safe wrapper
-    private static let resolverLock = NSRecursiveLock()
+    //
+    // Resolved through Swinject's synchronized view of the container. Swinject hands a factory the
+    // container that is resolving, so a lock around the entry point alone (the old LockedResolver)
+    // left everything built inside it, the router and so every screen, resolving unlocked.
+    static let resolver: Resolver = {
+        let container = Container(defaultObjectScope: .container)
+        _ = Assembler([
+            StorageAssembly(),
+            ServiceAssembly(),
+            APSAssembly(),
+            NetworkAssembly(),
+            UIAssembly(),
+            SecurityAssembly()
+        ], container: container)
+        return container.synchronize()
+    }()
 
     var resolver: Resolver {
         TrioApp.resolver
-    }
-
-    static var resolver: Resolver {
-        // Return a simple wrapper that adds locking
-        LockedResolver(resolver: assembler.resolver, lock: resolverLock)
     }
 
     private func loadServices() {
