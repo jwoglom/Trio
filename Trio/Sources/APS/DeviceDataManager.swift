@@ -196,7 +196,14 @@ final class BaseDeviceDataManager: DeviceDataManager, Injectable {
         }
     }
 
-    @PersistedProperty(key: "PumpManagerState") var rawPumpManager: PumpManager.RawValue?
+    // Written on the main thread by pumpManager.didSet and on processQueue by
+    // pumpManagerDidUpdateState, which a pump manager may call as soon as delegateQueue is set.
+    private let rawPumpManagerLock = NSLock()
+    @PersistedProperty(key: "PumpManagerState") private var persistedPumpManager: PumpManager.RawValue?
+    var rawPumpManager: PumpManager.RawValue? {
+        get { rawPumpManagerLock.withLock { persistedPumpManager } }
+        set { rawPumpManagerLock.withLock { persistedPumpManager = newValue } }
+    }
 
     @SyncAccess private var lastPumpHeartbeatRequest: PumpHeartbeatRequest?
     @SyncAccess private var cgmProvidesBLEHeartbeat = false
