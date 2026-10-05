@@ -53,17 +53,13 @@ extension Notification.Name {
         SecurityAssembly()
     ], parent: nil, defaultObjectScope: .container)
 
-    // Simple thread-safe wrapper
-    private static let resolverLock = NSRecursiveLock()
-
     var resolver: Resolver {
         TrioApp.resolver
     }
 
-    static var resolver: Resolver {
-        // Return a simple wrapper that adds locking
-        LockedResolver(resolver: assembler.resolver, lock: resolverLock)
-    }
+    // Swinject passes each factory the resolver it was called on, so the services built from this one keep a
+    // synchronized resolver too; a lock around the bare container only covered callers of `TrioApp.resolver`.
+    static let resolver: Resolver = (assembler.resolver as! Container).synchronize()
 
     private func loadServices() {
         resolver.resolve(AppearanceManager.self)!.setupGlobalAppearance()
