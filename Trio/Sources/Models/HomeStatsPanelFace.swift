@@ -5,6 +5,8 @@ enum HomeStatsPanelFace: String, JSON, CaseIterable, Identifiable, Codable, Hash
     case timeInRange
     case distributionBar
     case averages
+    case loopingPerformance
+    case totalDailyDose
     case hidden
 
     var displayName: String {
@@ -14,7 +16,11 @@ enum HomeStatsPanelFace: String, JSON, CaseIterable, Identifiable, Codable, Hash
         case .distributionBar:
             return String(localized: "Distribution Bar Only", comment: "Home stats panel face option")
         case .averages:
-            return String(localized: "Today's Averages", comment: "Home stats panel face option")
+            return String(localized: "Averages", comment: "Home stats panel face option")
+        case .loopingPerformance:
+            return String(localized: "Looping Performance", comment: "Home stats panel face option")
+        case .totalDailyDose:
+            return String(localized: "Total Daily Dose", comment: "Home stats panel face option")
         case .hidden:
             return String(localized: "Hide Statistics", comment: "Home stats panel face option")
         }
