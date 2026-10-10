@@ -55,4 +55,26 @@ import Testing
         #expect(resolver.resolve(TrioRemoteControl.self) === resolver.resolve(TrioRemoteControl.self))
         #expect(resolver.resolve(TelemetryClient.self) === resolver.resolve(TelemetryClient.self))
     }
+
+    @Test("Factories are handed the synchronized resolver TrioApp gives out") func testFactoriesGetSynchronizedResolver() throws {
+        let resolver = TrioApp.makeResolver([ResolverProbeAssembly()])
+        let probe = try #require(resolver.resolve(ResolverProbe.self))
+
+        // A wrapper around the container (or Swinject before 2.8.2) hands factories the bare, unlocked container
+        #expect((probe.resolver as AnyObject) === (resolver as AnyObject))
+    }
+}
+
+private final class ResolverProbe {
+    let resolver: Resolver
+
+    init(resolver: Resolver) {
+        self.resolver = resolver
+    }
+}
+
+private struct ResolverProbeAssembly: Assembly {
+    func assemble(container: Container) {
+        container.register(ResolverProbe.self) { r in ResolverProbe(resolver: r) }
+    }
 }
