@@ -201,6 +201,7 @@ extension Treatments {
 
         var bolusProgress: Decimal?
         var bolusStatus: BolusStatus = .noBolus
+        var bolusInProgressUnits: Decimal?
         var lastPumpBolus: PumpEventStored?
 
         func unsubscribe() {
@@ -297,6 +298,11 @@ extension Treatments {
             provider.deviceManager.bolusTrigger
                 .receive(on: DispatchQueue.main)
                 .weakAssign(to: \.bolusStatus, on: self)
+                .store(in: &lifetime)
+
+            provider.deviceManager.bolusInProgressUnits
+                .receive(on: DispatchQueue.main)
+                .weakAssign(to: \.bolusInProgressUnits, on: self)
                 .store(in: &lifetime)
         }
 

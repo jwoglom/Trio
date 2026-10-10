@@ -568,7 +568,7 @@ extension Treatments {
         /// xmark.app cancel, gradient progress bar overlaid at the bottom.
         @ViewBuilder private var bolusInProgressView: some View {
             let progress = state.bolusProgress ?? 0
-            let bolusTotal = state.lastPumpBolus?.bolus?.amount as Decimal?
+            let bolusTotal = state.bolusInProgressUnits ?? (state.lastPumpBolus?.bolus?.amount as Decimal?)
             let bolusFraction = (bolusTotal ?? 0) * progress
             let bolusString: String = {
                 guard let bolusTotal = bolusTotal else { return String(localized: "Bolus In Progress...") }

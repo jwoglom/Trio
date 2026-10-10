@@ -106,6 +106,7 @@ extension Home {
         var suspendAndResumeEvents: [PumpEventStored] = []
         var batteryFromPersistence: [OpenAPS_Battery] = []
         var bolusStatus: BolusStatus = .noBolus
+        var bolusInProgressUnits: Decimal?
         var lastPumpBolus: PumpEventStored?
         var overrides: [OverrideStored] = []
         var overrideRunStored: [OverrideRunStored] = []
@@ -529,6 +530,11 @@ extension Home {
             provider.deviceManager.bolusTrigger
                 .receive(on: DispatchQueue.main)
                 .weakAssign(to: \.bolusStatus, on: self)
+                .store(in: &subscriptions)
+
+            provider.deviceManager.bolusInProgressUnits
+                .receive(on: DispatchQueue.main)
+                .weakAssign(to: \.bolusInProgressUnits, on: self)
                 .store(in: &subscriptions)
         }
 

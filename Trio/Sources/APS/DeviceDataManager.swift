@@ -20,6 +20,8 @@ protocol DeviceDataManager {
     var pumpDisplayState: CurrentValueSubject<PumpDisplayState?, Never> { get }
     var recommendsLoop: PassthroughSubject<Void, Never> { get }
     var bolusTrigger: CurrentValueSubject<BolusStatus, Never> { get }
+    /// From the pump manager's status: a bolus started on the pump has no stored pump event until it finishes.
+    var bolusInProgressUnits: CurrentValueSubject<Decimal?, Never> { get }
     var manualTempBasal: PassthroughSubject<Bool, Never> { get }
     var scheduledBasal: PassthroughSubject<Bool?, Never> { get }
     var suspended: PassthroughSubject<Bool, Never> { get }
@@ -58,6 +60,7 @@ final class BaseDeviceDataManager: DeviceDataManager, Injectable {
 
     let recommendsLoop = PassthroughSubject<Void, Never>()
     let bolusTrigger = CurrentValueSubject<BolusStatus, Never>(.noBolus)
+    let bolusInProgressUnits = CurrentValueSubject<Decimal?, Never>(nil)
     let errorSubject = PassthroughSubject<Error, Never>()
     let pumpNewStatus = PassthroughSubject<Void, Never>()
     let manualTempBasal = PassthroughSubject<Bool, Never>()
@@ -435,10 +438,13 @@ extension BaseDeviceDataManager: PumpManagerDelegate {
 
         switch status.bolusState {
         case .initiating:
+            bolusInProgressUnits.send(nil)
             bolusTrigger.send(.initiating)
         case let .inProgress(dose):
+            bolusInProgressUnits.send(Decimal(dose.programmedUnits))
             bolusTrigger.send(.inProgress)
         default:
+            bolusInProgressUnits.send(nil)
             bolusTrigger.send(.noBolus)
         }
 

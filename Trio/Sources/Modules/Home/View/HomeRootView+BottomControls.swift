@@ -463,10 +463,9 @@ extension Home.RootView {
     }
 
     @ViewBuilder func bolusView(_ progress: Decimal) -> some View {
-        /// ensure that state.lastPumpBolus has a value, i.e. there is a last bolus done by the pump and not an external bolus
-        /// - TRUE:  show the pump bolus
-        /// - FALSE:  do not show a progress bar at all
-        if let bolusTotal = state.lastPumpBolus?.bolus?.amount {
+        /// The total is the in-progress bolus's from the pump manager, else the last pump (not external) bolus stored;
+        /// with neither, no progress bar is shown.
+        if let bolusTotal = state.bolusInProgressUnits ?? (state.lastPumpBolus?.bolus?.amount as Decimal?) {
             let bolusFraction = progress * (bolusTotal as Decimal)
             let bolusString =
                 (bolusProgressFormatter.string(from: bolusFraction as NSNumber) ?? "0")
