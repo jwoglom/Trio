@@ -55,4 +55,9 @@ import Testing
         #expect(resolver.resolve(TrioRemoteControl.self) === resolver.resolve(TrioRemoteControl.self))
         #expect(resolver.resolve(TelemetryClient.self) === resolver.resolve(TelemetryClient.self))
     }
+
+    @Test("Services keep the synchronized app resolver they were built through") func testFactoriesKeepAppResolver() throws {
+        let router = try #require(TrioApp.resolver.resolve(Router.self) as? BaseRouter)
+        #expect(router.resolver as AnyObject === TrioApp.resolver as AnyObject)
+    }
 }

@@ -11,7 +11,7 @@ protocol Router {
 final class BaseRouter: Router {
     let mainModalScreen = CurrentValueSubject<Screen?, Never>(nil)
     let mainSecondaryModalView = CurrentValueSubject<AnyView?, Never>(nil)
-    private let resolver: Resolver
+    let resolver: Resolver
 
     init(resolver: Resolver) {
         self.resolver = resolver
