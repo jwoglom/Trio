@@ -227,7 +227,8 @@ import UIKit
             "FreeStyle Libre 1 / 2 / 2+",
             "FreeStyle Libre 3 / 3+ (Beta)",
             "Dexcom G5",
-            "xDrip4iOS"
+            "xDrip4iOS",
+            "twiist"
         ])
     }
 }

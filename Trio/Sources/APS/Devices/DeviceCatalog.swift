@@ -4,6 +4,7 @@ import AccuChekKit
 import CGMBLEKit
 import CGMBLEKitUI
 import DanaKit
+import TwiistKit
 import EversenseKit
 import Foundation
 import G7SensorKit
@@ -44,6 +45,7 @@ enum DeviceManufacturer: CaseIterable {
     case medtrum
     case roche
     case senseonics
+    case sequel
     case sooil
     case otherSources
     case simulator
@@ -58,6 +60,7 @@ enum DeviceManufacturer: CaseIterable {
         case .medtrum: return "Medtrum"
         case .roche: return "Roche"
         case .senseonics: return "Senseonics"
+        case .sequel: return "Sequel Med Tech"
         case .sooil: return "SOOIL"
         case .otherSources: return String(localized: "Other Sources", comment: "Device picker section for data relays")
         case .simulator: return String(localized: "Simulator", comment: "Device picker section for simulated devices")
@@ -436,6 +439,15 @@ extension DeviceCatalog {
             icon: .managerBundle(asset: "danars"),
             basalCapability: BasalRateCapability(supportedRates: DanaKitPumpManager.onboardingSupportedBasalRates),
             reportsRewindEvents: true
+        ),
+        PumpCatalogEntry(
+            TwiistPumpManager.self,
+            manufacturer: .sequel,
+            name: "twiist",
+            supportedModels: ["twiist"],
+            icon: .none,
+            basalCapability: BasalRateCapability(supportedRates: TwiistPumpManager.onboardingSupportedBasalRates),
+            reportsRewindEvents: false
         ),
         PumpCatalogEntry(
             MockPumpManager.self,
