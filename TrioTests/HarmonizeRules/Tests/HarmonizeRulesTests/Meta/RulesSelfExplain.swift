@@ -18,7 +18,7 @@ import Testing
         )
     }
 
-    private static let infrastructure = ["TrioHarmonize.swift"]
+    private static let infrastructure = ["TrioHarmonize.swift", "XcodeProject.swift"]
 
     private static func swiftFiles(in directory: URL) -> [URL] {
         let enumerator = FileManager.default.enumerator(at: directory, includingPropertiesForKeys: nil)
