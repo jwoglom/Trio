@@ -27,13 +27,13 @@ final class SettingsExportTests: XCTestCase {
 
     func testExportErrorTypes() {
         // Test that our export error types are properly defined
-        let documentError = Settings.StateModel.ExportError.documentsDirectoryNotFound
+        let documentError = SettingsExport.StateModel.ExportError.documentsDirectoryNotFound
         XCTAssertNotNil(documentError.errorDescription, "Document error should have description")
 
-        let writeError = Settings.StateModel.ExportError.fileWriteError(TestError.testError)
+        let writeError = SettingsExport.StateModel.ExportError.fileWriteError(TestError("write failed"))
         XCTAssertNotNil(writeError.errorDescription, "Write error should have description")
 
-        let unknownError = Settings.StateModel.ExportError.unknown("Test message")
+        let unknownError = SettingsExport.StateModel.ExportError.unknown("Test message")
         XCTAssertNotNil(unknownError.errorDescription, "Unknown error should have description")
     }
 
@@ -49,7 +49,7 @@ final class SettingsExportTests: XCTestCase {
         XCTAssertEqual(fileName.components(separatedBy: "_").count, 2, "File name should have one underscore")
     }
 
-    // Helper function to test CSV escaping (extracted from Settings.StateModel)
+    // Helper function to test CSV escaping (extracted from SettingsExport.StateModel)
     private func csvEscape(_ value: String) -> String {
         if value.contains(",") || value.contains("\"") || value.contains("\n") {
             return "\"\(value.replacingOccurrences(of: "\"", with: "\"\""))\""
