@@ -68,7 +68,10 @@ extension Home.StateModel {
 
             Foundation.NotificationCenter.default.post(name: .didUpdateTempTargetConfiguration, object: nil)
         } catch let error as NSError {
-            debugPrint("\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to cancel Temp Target with error: \(error)")
+            debug(
+                .default,
+                "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to cancel Temp Target with error: \(error)"
+            )
         }
     }
 
@@ -86,7 +89,10 @@ extension Home.StateModel {
             guard viewContext.hasChanges else { return }
             try viewContext.save()
         } catch let error as NSError {
-            debugPrint("\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to save Temp Target with error: \(error)")
+            debug(
+                .default,
+                "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to save Temp Target with error: \(error)"
+            )
         }
     }
 }

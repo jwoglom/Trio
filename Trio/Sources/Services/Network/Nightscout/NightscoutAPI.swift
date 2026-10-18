@@ -320,7 +320,7 @@ extension NightscoutAPI {
 //            debugPrint("Payload treatments size: \(encodedBody.count) bytes")
 //            debugPrint(String(data: encodedBody, encoding: .utf8) ?? "Invalid payload")
         } catch {
-            debugPrint("Error encoding payload: \(error)")
+            debug(.nightscout, "Error encoding payload: \(error)")
             throw error
         }
         request.httpMethod = "POST"
@@ -355,7 +355,7 @@ extension NightscoutAPI {
 //            debugPrint("Payload glucose size: \(encodedBody.count) bytes")
 //            debugPrint(String(data: encodedBody, encoding: .utf8) ?? "Invalid payload")
         } catch {
-            debugPrint("Error encoding payload: \(error)")
+            debug(.nightscout, "Error encoding payload: \(error)")
             throw error
         }
         request.httpMethod = "POST"
@@ -391,7 +391,7 @@ extension NightscoutAPI {
 //            debugPrint("Payload status size: \(encodedBody.count) bytes")
 //            debugPrint(String(data: encodedBody, encoding: .utf8) ?? "Invalid payload")
         } catch {
-            debugPrint("Error encoding payload: \(error)")
+            debug(.nightscout, "Error encoding payload: \(error)")
             throw error
         }
 
@@ -429,7 +429,7 @@ extension NightscoutAPI {
 //            debugPrint("Payload profile upload size: \(encodedBody.count) bytes")
 //            debugPrint(String(data: encodedBody, encoding: .utf8) ?? "Invalid payload")
         } catch {
-            debugPrint("Error encoding payload: \(error)")
+            debug(.nightscout, "Error encoding payload: \(error)")
             throw error
         }
         request.httpMethod = "POST"
@@ -494,7 +494,7 @@ extension NightscoutAPI {
 //            debugPrint("Payload glucose size: \(encodedBody.count) bytes")
 //            debugPrint(String(data: encodedBody, encoding: .utf8) ?? "Invalid payload")
         } catch {
-            debugPrint("Error encoding payload: \(error)")
+            debug(.nightscout, "Error encoding payload: \(error)")
             throw error
         }
         request.httpMethod = "POST"

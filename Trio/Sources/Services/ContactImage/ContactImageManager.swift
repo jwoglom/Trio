@@ -297,7 +297,7 @@ final class BaseContactImageManager: NSObject, ContactImageManager, Injectable {
     func setImageForContact(contactId: String) async {
         guard let contactEntry = await contactImageStorage.fetchContactImageEntries().first(where: { $0.contactId == contactId })
         else {
-            debugPrint("\(DebuggingIdentifiers.failed) No matching ContactImageEntry found for contact ID: \(contactId)")
+            debug(.service, "\(DebuggingIdentifiers.failed) No matching ContactImageEntry found for contact ID: \(contactId)")
             return
         }
 
@@ -315,7 +315,7 @@ final class BaseContactImageManager: NSObject, ContactImageManager, Injectable {
             )
 
             guard let contact = contacts.first else {
-                debugPrint("\(DebuggingIdentifiers.failed) Contact with ID \(contactId) not found.")
+                debug(.service, "\(DebuggingIdentifiers.failed) Contact with ID \(contactId) not found.")
                 return
             }
 
@@ -327,9 +327,9 @@ final class BaseContactImageManager: NSObject, ContactImageManager, Injectable {
 
             try contactStore.execute(saveRequest)
 
-            debugPrint("\(DebuggingIdentifiers.succeeded) Image successfully set for contact ID: \(contactId)")
+            debug(.service, "\(DebuggingIdentifiers.succeeded) Image successfully set for contact ID: \(contactId)")
         } catch {
-            debugPrint("\(DebuggingIdentifiers.failed) Failed to set image for contact ID \(contactId): \(error)")
+            debug(.service, "\(DebuggingIdentifiers.failed) Failed to set image for contact ID \(contactId): \(error)")
         }
     }
 
@@ -359,7 +359,8 @@ final class BaseContactImageManager: NSObject, ContactImageManager, Injectable {
 
                 // Ensure the contact exists in the CNContactStore
                 guard let contact = contacts.first else {
-                    debugPrint(
+                    debug(
+                        .service,
                         "\(DebuggingIdentifiers.failed) Contact with ID \(contactId) and name \(contactEntry.name) not found."
                     )
                     continue
@@ -376,9 +377,9 @@ final class BaseContactImageManager: NSObject, ContactImageManager, Injectable {
                 // Execute the save request to persist the changes
                 try contactStore.execute(saveRequest)
 
-                debugPrint("\(DebuggingIdentifiers.succeeded) Updated contact image for \(contactId)")
+                debug(.service, "\(DebuggingIdentifiers.succeeded) Updated contact image for \(contactId)")
             } catch {
-                debugPrint("\(DebuggingIdentifiers.failed) Failed to update contact image for \(contactId): \(error)")
+                debug(.service, "\(DebuggingIdentifiers.failed) Failed to update contact image for \(contactId): \(error)")
             }
         }
     }
@@ -400,7 +401,7 @@ final class BaseContactImageManager: NSObject, ContactImageManager, Injectable {
 
             // If contact exists, return its identifier
             if let existingContact = existingContacts.first {
-                debugPrint("Found existing contact with name: \(name)")
+                debug(.service, "Found existing contact with name: \(name)")
                 return existingContact.identifier
             }
 
@@ -420,13 +421,13 @@ final class BaseContactImageManager: NSObject, ContactImageManager, Injectable {
             )
 
             guard let createdContact = newContacts.first else {
-                debugPrint("\(DebuggingIdentifiers.failed) Contact creation failed: No contact found after save.")
+                debug(.service, "\(DebuggingIdentifiers.failed) Contact creation failed: No contact found after save.")
                 return nil
             }
 
             return createdContact.identifier
         } catch {
-            debugPrint("\(DebuggingIdentifiers.failed) Error creating/finding contact: \(error)")
+            debug(.service, "\(DebuggingIdentifiers.failed) Error creating/finding contact: \(error)")
             return nil
         }
     }
@@ -441,7 +442,7 @@ final class BaseContactImageManager: NSObject, ContactImageManager, Injectable {
             let contacts = try store.unifiedContacts(matching: predicate, keysToFetch: keys)
             return !contacts.isEmpty
         } catch {
-            debugPrint("\(DebuggingIdentifiers.failed) Error validating contact: \(error)")
+            debug(.service, "\(DebuggingIdentifiers.failed) Error validating contact: \(error)")
             return false
         }
     }
@@ -459,7 +460,7 @@ final class BaseContactImageManager: NSObject, ContactImageManager, Injectable {
             )
 
             guard let contact = contacts.first else {
-                debugPrint("\(DebuggingIdentifiers.failed) Contact with ID \(identifier) not found.")
+                debug(.service, "\(DebuggingIdentifiers.failed) Contact with ID \(identifier) not found.")
                 return false
             }
 
@@ -469,10 +470,10 @@ final class BaseContactImageManager: NSObject, ContactImageManager, Injectable {
             deleteRequest.delete(mutableContact)
 
             try contactStore.execute(deleteRequest)
-            debugPrint("\(DebuggingIdentifiers.succeeded) Contact successfully deleted: \(identifier)")
+            debug(.service, "\(DebuggingIdentifiers.succeeded) Contact successfully deleted: \(identifier)")
             return true
         } catch {
-            debugPrint("\(DebuggingIdentifiers.failed) Error deleting contact: \(error)")
+            debug(.service, "\(DebuggingIdentifiers.failed) Error deleting contact: \(error)")
             return false
         }
     }
@@ -496,7 +497,7 @@ final class BaseContactImageManager: NSObject, ContactImageManager, Injectable {
             )
 
             guard let contact = contacts.first else {
-                debugPrint("\(DebuggingIdentifiers.failed) Contact with ID \(identifier) not found.")
+                debug(.service, "\(DebuggingIdentifiers.failed) Contact with ID \(identifier) not found.")
                 return false
             }
 
@@ -508,10 +509,10 @@ final class BaseContactImageManager: NSObject, ContactImageManager, Injectable {
             updateRequest.update(mutableContact)
 
             try contactStore.execute(updateRequest)
-            debugPrint("\(DebuggingIdentifiers.succeeded) Contact successfully updated: \(identifier)")
+            debug(.service, "\(DebuggingIdentifiers.succeeded) Contact successfully updated: \(identifier)")
             return true
         } catch {
-            debugPrint("\(DebuggingIdentifiers.failed) Error updating contact: \(error)")
+            debug(.service, "\(DebuggingIdentifiers.failed) Error updating contact: \(error)")
             return false
         }
     }

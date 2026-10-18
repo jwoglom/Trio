@@ -232,7 +232,7 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
         let units = settingsManager.settings.units
         let managerName = cgmManager.map { "\(type(of: $0))" } ?? "nil"
         let loopkitUnits: HKUnit = units == .mgdL ? .milligramsPerDeciliter : .millimolesPerLiter
-        print("manager: \(managerName) is changing units to: \(loopkitUnits.description) ")
+        debug(.deviceManager, "manager: \(managerName) is changing units to: \(loopkitUnits.description) ")
         manager?.unitDidChange(to: loopkitUnits)
     }
 
@@ -505,7 +505,7 @@ extension BaseFetchGlucoseManager {
             }
 
             let duration = Date().timeIntervalSince(startTime)
-            debugPrint(String(format: "Exponential smoothing duration: %0.04fs", duration))
+            debug(.deviceManager, String(format: "Exponential smoothing duration: %0.04fs", duration))
         } catch {
             debug(.deviceManager, "Failed to smooth glucose: \(error)")
         }

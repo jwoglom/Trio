@@ -29,7 +29,7 @@ class Icons: ObservableObject, Equatable {
 
         UIApplication.shared.setAlternateIconName(iconName) { error in
             if let error = error {
-                print("Failed request to update the app’s icon: \(error)")
+                debug(.default, "Failed request to update the app’s icon: \(error)")
             }
         }
 

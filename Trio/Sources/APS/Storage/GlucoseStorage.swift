@@ -196,7 +196,7 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
             let results = try context.fetch(fetchRequest) as? [NSDictionary]
             existingDates = results?.compactMap({ $0["date"] as? Date }) ?? []
         } catch {
-            debugPrint("Failed to fetch existing glucose dates: \(error)")
+            debug(.coreData, "Failed to fetch existing glucose dates: \(error)")
         }
 
         // This is an inefficient filtering algorithm, but I'm assuming that the
@@ -350,7 +350,8 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
                 // Glucose subscribers already listen to the update publisher, so call here to update glucose-related data.
                 self.updateSubject.send()
             } catch let error as NSError {
-                debugPrint(
+                debug(
+                    .coreData,
                     "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to save manual glucose to Core Data with error: \(error)"
                 )
             }
@@ -384,7 +385,7 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
                     fetchedDate = date
                 }
             } catch {
-                debugPrint("Fetch error: \(DebuggingIdentifiers.failed) \(error)")
+                debug(.coreData, "Fetch error: \(DebuggingIdentifiers.failed) \(error)")
             }
         }
 
@@ -871,7 +872,10 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
                 let result = try context.existingObject(with: treatmentObjectID) as? GlucoseStored
 
                 guard let glucoseToDelete = result else {
-                    debugPrint("Data Table State: \(#function) \(DebuggingIdentifiers.failed) glucose not found in core data")
+                    debug(
+                        .coreData,
+                        "Data Table State: \(#function) \(DebuggingIdentifiers.failed) glucose not found in core data"
+                    )
                     return
                 }
 
@@ -887,9 +891,10 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
 
                 guard context.hasChanges else { return }
                 try context.save()
-                debugPrint("\(#file) \(#function) \(DebuggingIdentifiers.succeeded) deleted glucose from core data")
+                debug(.coreData, "\(#file) \(#function) \(DebuggingIdentifiers.succeeded) deleted glucose from core data")
             } catch {
-                debugPrint(
+                debug(
+                    .coreData,
                     "\(#file) \(#function) \(DebuggingIdentifiers.failed) error while deleting glucose from core data: \(error)"
                 )
             }
@@ -917,7 +922,7 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
 
                 return nil
             } catch {
-                debugPrint("Error fetching latest glucose: \(error)")
+                debug(.coreData, "Error fetching latest glucose: \(error)")
                 return nil
             }
         }

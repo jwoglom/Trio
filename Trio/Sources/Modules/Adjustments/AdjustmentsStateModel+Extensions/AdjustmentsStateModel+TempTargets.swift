@@ -38,7 +38,10 @@ extension Adjustments.StateModel {
                 await resetTempTargetState()
             }
         } catch {
-            debugPrint("\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to update latest temp target configuration")
+            debug(
+                .default,
+                "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to update latest temp target configuration"
+            )
         }
     }
 
@@ -57,7 +60,8 @@ extension Adjustments.StateModel {
                 tempTargetTarget = tempTargetToEdit.target?.decimalValue ?? 0
             }
         } catch {
-            debugPrint(
+            debug(
+                .default,
                 "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to set active preset name with error: \(error)"
             )
         }
@@ -91,7 +95,7 @@ extension Adjustments.StateModel {
                 try viewContext.existingObject(with: id) as? TempTargetStored
             }
         } catch {
-            debugPrint("\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to fetch Temp Targets")
+            debug(.default, "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to fetch Temp Targets")
             return []
         }
     }
@@ -288,7 +292,7 @@ extension Adjustments.StateModel {
             )
             tempTargetStorage.saveTempTargetsToStorage([tempTarget])
         } catch {
-            debugPrint("\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to enact TempTarget Preset")
+            debug(.default, "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to enact TempTarget Preset")
         }
     }
 
@@ -373,7 +377,8 @@ extension Adjustments.StateModel {
                 activeTempTargetName = tempTargetToEdit.name ?? String(localized: "Custom Temp Target")
             }
         } catch {
-            debugPrint(
+            debug(
+                .default,
                 "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to cancel previous override with error: \(error)"
             )
         }

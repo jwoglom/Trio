@@ -118,7 +118,7 @@ final class BaseCalendarManager: CalendarManager, Injectable {
                     if #available(iOS 17.0, *) {
                         EKEventStore().requestFullAccessToEvents { granted, error in
                             if let error = error {
-                                print("Calendar access not granted: \(error)")
+                                debug(.service, "Calendar access not granted: \(error)")
                                 warning(.service, "Calendar access not granted", error: error)
                             }
                             continuation.resume(returning: granted)
@@ -126,7 +126,7 @@ final class BaseCalendarManager: CalendarManager, Injectable {
                     } else {
                         EKEventStore().requestAccess(to: .event) { granted, error in
                             if let error = error {
-                                print("Calendar access not granted: \(error)")
+                                debug(.service, "Calendar access not granted: \(error)")
                                 warning(.service, "Calendar access not granted", error: error)
                             }
                             continuation.resume(returning: granted)
@@ -135,7 +135,7 @@ final class BaseCalendarManager: CalendarManager, Injectable {
                 #else
                     EKEventStore().requestAccess(to: .event) { granted, error in
                         if let error = error {
-                            print("Calendar access not granted: \(error)")
+                            debug(.service, "Calendar access not granted: \(error)")
                             warning(.service, "Calendar access not granted", error: error)
                         }
                         continuation.resume(returning: granted)
@@ -155,7 +155,7 @@ final class BaseCalendarManager: CalendarManager, Injectable {
                     return await withCheckedContinuation { continuation in
                         EKEventStore().requestFullAccessToEvents { granted, error in
                             if let error = error {
-                                print("Calendar access not upgraded: \(error)")
+                                debug(.service, "Calendar access not upgraded: \(error)")
                                 warning(.service, "Calendar access not upgraded", error: error)
                             }
                             continuation.resume(returning: granted)
@@ -310,7 +310,8 @@ final class BaseCalendarManager: CalendarManager, Injectable {
             previousDeterminationId = determinationId
 
         } catch {
-            debugPrint(
+            debug(
+                .service,
                 "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to create calendar event: \(error)"
             )
         }

@@ -56,7 +56,8 @@ final class BaseDeterminationStorage: DeterminationStorage, Injectable {
                 let forecasts = Array(forecastSet)
                 return forecasts.map(\.objectID) as [NSManagedObjectID]
             } catch {
-                debugPrint(
+                debug(
+                    .coreData,
                     "Failed \(DebuggingIdentifiers.failed) to fetch Forecast IDs for OrefDetermination with ID \(determinationID): \(error)"
                 )
                 return []
@@ -75,7 +76,8 @@ final class BaseDeterminationStorage: DeterminationStorage, Injectable {
                 let forecastValues = forecastValueSet.sorted(by: { $0.index < $1.index })
                 return forecastValues.map(\.objectID)
             } catch {
-                debugPrint(
+                debug(
+                    .coreData,
                     "Failed \(DebuggingIdentifiers.failed) to fetch Forecast Value IDs with ID \(forecastID): \(error)"
                 )
                 return []
@@ -103,7 +105,8 @@ final class BaseDeterminationStorage: DeterminationStorage, Injectable {
                     }
                 }
             } catch {
-                debugPrint(
+                debug(
+                    .coreData,
                     "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to fetch forecast Values with error: \(error)"
                 )
             }
@@ -136,7 +139,8 @@ final class BaseDeterminationStorage: DeterminationStorage, Injectable {
                 let values = forecast.forecastValuesArray.map { Int($0.value) }
                 return values.isEmpty ? nil : values
             } catch {
-                debugPrint(
+                debug(
+                    .coreData,
                     "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to fetch forecast of type \(type): \(error)"
                 )
                 return nil
@@ -196,7 +200,8 @@ final class BaseDeterminationStorage: DeterminationStorage, Injectable {
                     )
                 }
             } catch {
-                debugPrint(
+                debug(
+                    .coreData,
                     "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to fetch managed object with error: \(error)"
                 )
             }

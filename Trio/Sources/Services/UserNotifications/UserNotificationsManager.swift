@@ -99,7 +99,7 @@ final class BaseUserNotificationsManager: NSObject, UserNotificationsManager, In
                     guard let error else {
                         return
                     }
-                    print(error)
+                    debug(.service, "\(error)")
                 }
             }
             return
@@ -117,7 +117,7 @@ final class BaseUserNotificationsManager: NSObject, UserNotificationsManager, In
                 guard let error else {
                     return
                 }
-                print(error)
+                debug(.service, "\(error)")
             }
         }
     }

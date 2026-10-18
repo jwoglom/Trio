@@ -187,7 +187,8 @@ extension Stat {
                 }
                 glucoseFromPersistence = glucoseObjects
             } catch {
-                debugPrint(
+                debug(
+                    .default,
                     "Home State: \(#function) \(DebuggingIdentifiers.failed) error while updating the glucose array: \(error)"
                 )
             }
@@ -200,7 +201,8 @@ extension Stat {
                 }
                 glucoseReadings = glucoseObjects
             } catch {
-                debugPrint(
+                debug(
+                    .default,
                     "Home State: \(#function) \(DebuggingIdentifiers.failed) error while updating the all glucose array: \(error.localizedDescription)"
                 )
             }

@@ -373,7 +373,7 @@ struct EditTempTargetForm: View {
                     hasChanges = false
                     presentationMode.wrappedValue.dismiss()
                 } catch {
-                    debugPrint("Failed to Edit Temp Target")
+                    debug(.default, "Failed to Edit Temp Target")
                 }
             }, label: {
                 Text("Save")

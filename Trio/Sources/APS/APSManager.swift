@@ -410,7 +410,10 @@ final class BaseAPSManager: APSManager, Injectable {
                 return nil
             }
         } catch {
-            debugPrint("\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to fetch the last loop with error: \(error)")
+            debug(
+                .apsManager,
+                "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to fetch the last loop with error: \(error)"
+            )
             return nil
         }
     }
@@ -615,7 +618,8 @@ final class BaseAPSManager: APSManager, Injectable {
                 simulation: true
             )
         } catch {
-            debugPrint(
+            debug(
+                .apsManager,
                 "\(DebuggingIdentifiers.failed) \(#file) \(#function) Error occurred in simulateDetermineBasal: \(error)"
             )
             return nil
@@ -1062,7 +1066,7 @@ final class BaseAPSManager: APSManager, Injectable {
             do {
                 return try context.fetch(requestStats).first?.lastrun
             } catch {
-                print(error.localizedDescription)
+                debug(.apsManager, error.localizedDescription)
                 return .distantPast
             }
         }
@@ -1101,7 +1105,8 @@ final class BaseAPSManager: APSManager, Injectable {
                     max_duration: oneDayLoops.max_duration
                 )
             } catch {
-                debugPrint(
+                debug(
+                    .apsManager,
                     "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to get Loop statistics for Statistics Upload"
                 )
                 return LoopCycles(
@@ -1296,7 +1301,7 @@ final class BaseAPSManager: APSManager, Injectable {
                 guard context.hasChanges else { return }
                 try context.save()
             } catch {
-                print(error.localizedDescription)
+                debug(.apsManager, error.localizedDescription)
             }
         }
     }

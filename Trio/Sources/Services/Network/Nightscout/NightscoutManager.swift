@@ -380,7 +380,7 @@ final class BaseNightscoutManager: NightscoutManager, Injectable {
             }
             return glucose
         } catch {
-            print(error.localizedDescription)
+            debug(.nightscout, error.localizedDescription)
             return []
         }
     }
@@ -494,7 +494,8 @@ final class BaseNightscoutManager: NightscoutManager, Injectable {
                     let display: Bool? = last.display
 
                     if let status {
-                        debugPrint(
+                        debug(
+                            .nightscout,
                             "NightscoutManager: \(#function) \(DebuggingIdentifiers.succeeded) setup battery from core data successfully"
                         )
                         return Battery(
@@ -505,12 +506,14 @@ final class BaseNightscoutManager: NightscoutManager, Injectable {
                         )
                     }
                 }
-                debugPrint(
+                debug(
+                    .nightscout,
                     "NightscoutManager: \(#function) \(DebuggingIdentifiers.succeeded) successfully fetched; but no battery data available. Returning fallback default."
                 )
                 return Battery(percent: nil, voltage: nil, string: BatteryState.error, display: nil)
             } catch {
-                debugPrint(
+                debug(
+                    .nightscout,
                     "NightscoutManager: \(#function) \(DebuggingIdentifiers.failed) failed to setup battery from core data"
                 )
                 return Battery(percent: nil, voltage: nil, string: BatteryState.error, display: nil)
@@ -734,7 +737,8 @@ final class BaseNightscoutManager: NightscoutManager, Injectable {
                 guard context.hasChanges else { return }
                 try context.save()
             } catch let error as NSError {
-                debugPrint(
+                debug(
+                    .nightscout,
                     "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to update isUploadedToNS: \(error.userInfo)"
                 )
             }
@@ -1006,7 +1010,8 @@ final class BaseNightscoutManager: NightscoutManager, Injectable {
                 guard context.hasChanges else { return }
                 try context.save()
             } catch let error as NSError {
-                debugPrint(
+                debug(
+                    .nightscout,
                     "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to update isUploadedToNS: \(error.userInfo)"
                 )
             }
@@ -1079,7 +1084,8 @@ final class BaseNightscoutManager: NightscoutManager, Injectable {
                 guard context.hasChanges else { return }
                 try context.save()
             } catch let error as NSError {
-                debugPrint(
+                debug(
+                    .nightscout,
                     "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to update isUploadedToNS: \(error.userInfo)"
                 )
             }
@@ -1135,7 +1141,8 @@ final class BaseNightscoutManager: NightscoutManager, Injectable {
                 guard context.hasChanges else { return }
                 try context.save()
             } catch let error as NSError {
-                debugPrint(
+                debug(
+                    .nightscout,
                     "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to update isUploadedToNS: \(error.userInfo)"
                 )
             }
@@ -1196,7 +1203,8 @@ final class BaseNightscoutManager: NightscoutManager, Injectable {
                 guard context.hasChanges else { return }
                 try context.save()
             } catch let error as NSError {
-                debugPrint(
+                debug(
+                    .nightscout,
                     "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to update isUploadedToNS: \(error.userInfo)"
                 )
             }
@@ -1254,7 +1262,8 @@ final class BaseNightscoutManager: NightscoutManager, Injectable {
                 guard context.hasChanges else { return }
                 try context.save()
             } catch let error as NSError {
-                debugPrint(
+                debug(
+                    .nightscout,
                     "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to update isUploadedToNS: \(error.userInfo)"
                 )
             }
@@ -1297,7 +1306,8 @@ final class BaseNightscoutManager: NightscoutManager, Injectable {
                 guard context.hasChanges else { return }
                 try context.save()
             } catch let error as NSError {
-                debugPrint(
+                debug(
+                    .nightscout,
                     "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to update isUploadedToNS for TempTargetStored: \(error.userInfo)"
                 )
             }
@@ -1340,7 +1350,8 @@ final class BaseNightscoutManager: NightscoutManager, Injectable {
                 guard context.hasChanges else { return }
                 try context.save()
             } catch let error as NSError {
-                debugPrint(
+                debug(
+                    .nightscout,
                     "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to update isUploadedToNS for TempTargetRunStored: \(error.userInfo)"
                 )
             }

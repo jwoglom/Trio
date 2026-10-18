@@ -228,12 +228,12 @@ import UIKit
         let fetchedDevVersion = configContents.flatMap { self.parseDevVersionFromConfig(contents: $0) }
 
         #if DEBUG
-            print("AppVersionChecker.fetchDevVersion: Current dev version: \(currentVersion)")
-            print("AppVersionChecker.fetchDevVersion: Fetched dev version: \(fetchedDevVersion ?? "nil")")
+            debug(.service, "AppVersionChecker.fetchDevVersion: Current dev version: \(currentVersion)")
+            debug(.service, "AppVersionChecker.fetchDevVersion: Fetched dev version: \(fetchedDevVersion ?? "nil")")
             if let contents = configContents {
                 let lines = contents.split(separator: "\n")
                 for line in lines where line.contains("VERSION") {
-                    print("AppVersionChecker.fetchDevVersion: Config line: \(line)")
+                    debug(.service, "AppVersionChecker.fetchDevVersion: Config line: \(line)")
                 }
             }
         #endif

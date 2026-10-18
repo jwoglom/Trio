@@ -263,7 +263,8 @@ final class BaseHealthKitManager: HealthKitManager, Injectable {
                 guard context.hasChanges else { return }
                 try context.save()
             } catch let error as NSError {
-                debugPrint(
+                debug(
+                    .service,
                     "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to update isUploadedToHealth: \(error.userInfo)"
                 )
             }
@@ -386,7 +387,8 @@ final class BaseHealthKitManager: HealthKitManager, Injectable {
                 guard context.hasChanges else { return }
                 try context.save()
             } catch let error as NSError {
-                debugPrint(
+                debug(
+                    .service,
                     "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to update isUploadedToHealth: \(error.userInfo)"
                 )
             }
@@ -651,7 +653,8 @@ final class BaseHealthKitManager: HealthKitManager, Injectable {
                 guard context.hasChanges else { return }
                 try context.save()
             } catch let error as NSError {
-                debugPrint(
+                debug(
+                    .service,
                     "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to update isUploadedToHealth: \(error.userInfo)"
                 )
             }

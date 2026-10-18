@@ -63,7 +63,8 @@ extension AutosensSettings {
                 determinationsFromPersistence = objects
 
             } catch {
-                debugPrint(
+                debug(
+                    .default,
                     "Home State: \(#function) \(DebuggingIdentifiers.failed) error while updating the glucose array: \(error)"
                 )
             }

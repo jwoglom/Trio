@@ -16,7 +16,8 @@ extension Bundle {
             // Note: We use `NSString` instead of `String`, because it makes it easier working with regex, ranges, substring etc.
             let profileNSString = NSString(data: profileData, encoding: String.Encoding.ascii.rawValue)
         else {
-            print(
+            debug(
+                .default,
                 "WARNING: Could not find or read `embedded.mobileprovision`. If running on Simulator, there are no provisioning profiles."
             )
             return nil
@@ -31,7 +32,7 @@ extension Bundle {
               ),
               let range = Range(match.range(at: 1), in: profileNSString as String)
         else {
-            print("Warning: Could not create regex or find match.")
+            debug(.default, "Warning: Could not create regex or find match.")
             return nil
         }
 
@@ -54,7 +55,8 @@ extension Bundle {
             // Note: We use `NSString` instead of `String`, because it makes it easier working with regex, ranges, substring etc.
             let profileNSString = NSString(data: profileData, encoding: String.Encoding.ascii.rawValue)
         else {
-            print(
+            debug(
+                .default,
                 "WARNING: Could not find or read `embedded.mobileprovision`. If running on Simulator, there are no provisioning profiles."
             )
             return "N/A"
@@ -63,7 +65,7 @@ extension Bundle {
         // NOTE: We have the `[\\W]*?` check to make sure that variations in number of tabs or new lines in the future does not influence the result.
         guard let regex = try? NSRegularExpression(pattern: "<key>ExpirationDate</key>[\\W]*?<date>(.*?)</date>", options: [])
         else {
-            print("Warning: Could not create regex.")
+            debug(.default, "Warning: Could not create regex.")
             return "N/A"
         }
 
@@ -75,7 +77,7 @@ extension Bundle {
 
         // NOTE: range `0` corresponds to the full regex match, so to get the first capture group, we use range `1`
         guard let rangeOfCapturedGroupForDate = regExMatches.first?.range(at: 1) else {
-            print("Warning: Could not find regex match or capture group.")
+            debug(.default, "Warning: Could not find regex match or capture group.")
             return "N/A"
         }
 

@@ -23,7 +23,7 @@ extension BasalProfileEditor {
 
         func saveProfile(_ profile: [BasalProfileEntry]) -> AnyPublisher<Void, Error> {
             guard let pump = deviceManager?.pumpManager else {
-                debugPrint("\(DebuggingIdentifiers.failed) No pump found; cannot save basal profile!")
+                debug(.default, "\(DebuggingIdentifiers.failed) No pump found; cannot save basal profile!")
                 return Fail(error: NSError()).eraseToAnyPublisher()
             }
 

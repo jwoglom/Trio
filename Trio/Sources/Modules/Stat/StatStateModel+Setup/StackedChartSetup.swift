@@ -72,7 +72,7 @@ extension Stat.StateModel {
                 do {
                     return try taskContext.existingObject(with: id) as? GlucoseStored
                 } catch {
-                    debugPrint("\(DebuggingIdentifiers.failed) Error fetching glucose: \(error)")
+                    debug(.default, "\(DebuggingIdentifiers.failed) Error fetching glucose: \(error)")
                     return nil
                 }
             }

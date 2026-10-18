@@ -319,7 +319,8 @@ extension BaseTidepoolManager {
                 guard context.hasChanges else { return }
                 try context.save()
             } catch let error as NSError {
-                debugPrint(
+                debug(
+                    .service,
                     "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to update isUploadedToTidepool: \(error.userInfo)"
                 )
             }
@@ -522,7 +523,8 @@ extension BaseTidepoolManager {
                 guard context.hasChanges else { return }
                 try context.save()
             } catch let error as NSError {
-                debugPrint(
+                debug(
+                    .service,
                     "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to update isUploadedToTidepool: \(error.userInfo)"
                 )
             }
@@ -767,7 +769,8 @@ extension BaseTidepoolManager {
                 guard context.hasChanges else { return }
                 try context.save()
             } catch let error as NSError {
-                debugPrint(
+                debug(
+                    .service,
                     "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to update isUploadedToTidepool: \(error.userInfo)"
                 )
             }

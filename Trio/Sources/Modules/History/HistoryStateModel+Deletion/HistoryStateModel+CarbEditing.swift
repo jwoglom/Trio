@@ -70,7 +70,7 @@ extension History.StateModel {
                     date: entryDate
                 )
             } catch {
-                debugPrint("\(DebuggingIdentifiers.failed) Failed to load entry: \(error)")
+                debug(.default, "\(DebuggingIdentifiers.failed) Failed to load entry: \(error)")
                 return nil
             }
         }
@@ -134,11 +134,11 @@ extension History.StateModel {
                 request.fetchLimit = 1
 
                 let originalEntry = try context.fetch(request).first
-                debugPrint("FPU fetch result: \(originalEntry != nil ? "Entry found" : "No entry found")")
+                debug(.default, "FPU fetch result: \(originalEntry != nil ? "Entry found" : "No entry found")")
                 return originalEntry?.objectID
 
             } catch let error as NSError {
-                debugPrint("\(DebuggingIdentifiers.failed) Failed to fetch original FPU entry: \(error.userInfo)")
+                debug(.default, "\(DebuggingIdentifiers.failed) Failed to fetch original FPU entry: \(error.userInfo)")
                 return nil
             }
         }
@@ -171,13 +171,14 @@ extension History.StateModel {
                 request.fetchLimit = 1
 
                 let correspondingCarbEntry = try context.fetch(request).first
-                debugPrint(
+                debug(
+                    .default,
                     "Corresponding carb entry fetch result: \(correspondingCarbEntry != nil ? "Entry found" : "No entry found")"
                 )
                 return correspondingCarbEntry?.objectID
 
             } catch let error as NSError {
-                debugPrint("\(DebuggingIdentifiers.failed) Failed to fetch corresponding carb entry: \(error.userInfo)")
+                debug(.default, "\(DebuggingIdentifiers.failed) Failed to fetch corresponding carb entry: \(error.userInfo)")
                 return nil
             }
         }
