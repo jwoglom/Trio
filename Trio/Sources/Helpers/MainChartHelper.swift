@@ -130,10 +130,11 @@ enum MainChartHelper {
                     return TimeInterval(doubleValue * 60) // return seconds
                 }
             } else {
-                debugPrint("Attribute \(attribute) not found or not of type NSDecimalNumber")
+                debug(.default, "Attribute \(attribute) not found or not of type NSDecimalNumber")
             }
         } catch {
-            debugPrint(
+            debug(
+                .default,
                 "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to calculate duration for object with error: \(error)"
             )
         }
@@ -148,7 +149,8 @@ enum MainChartHelper {
                 return attributeValue.decimalValue
             }
         } catch {
-            debugPrint(
+            debug(
+                .default,
                 "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to calculate target for object with error: \(error)"
             )
         }

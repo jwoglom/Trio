@@ -28,7 +28,10 @@ extension History.StateModel {
                 let result = try taskContext.existingObject(with: treatmentObjectID) as? GlucoseStored
 
                 guard let glucoseToDelete = result else {
-                    debugPrint("Data Table State: \(#function) \(DebuggingIdentifiers.failed) glucose not found in core data")
+                    debug(
+                        .default,
+                        "Data Table State: \(#function) \(DebuggingIdentifiers.failed) glucose not found in core data"
+                    )
                     return
                 }
 
@@ -42,11 +45,13 @@ extension History.StateModel {
                     self.provider.deleteGlucoseFromHealth(withSyncID: id)
                 }
 
-                debugPrint(
+                debug(
+                    .default,
                     "\(#file) \(#function) \(DebuggingIdentifiers.succeeded) deleted glucose from remote service(s) (Nightscout, Apple Health, Tidepool)"
                 )
             } catch {
-                debugPrint(
+                debug(
+                    .default,
                     "\(#file) \(#function) \(DebuggingIdentifiers.failed) error while deleting glucose remote service(s) (Nightscout, Apple Health, Tidepool) with error: \(error)"
                 )
             }

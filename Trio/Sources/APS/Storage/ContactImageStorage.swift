@@ -111,7 +111,8 @@ final class BaseContactImageStorage: ContactImageStorage, Injectable {
                 guard context.hasChanges else { return }
                 try context.save()
             } catch let error as NSError {
-                debugPrint(
+                debug(
+                    .coreData,
                     "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to save Contact Trick Entry to Core Data with error: \(error.userInfo)"
                 )
             }
@@ -156,12 +157,14 @@ final class BaseContactImageStorage: ContactImageStorage, Injectable {
                     guard context.hasChanges else { return }
                     try context.save()
                 } else {
-                    debugPrint(
+                    debug(
+                        .coreData,
                         "\(DebuggingIdentifiers.failed) \(#file) \(#function) No matching Contact Trick Entry found to update."
                     )
                 }
             } catch let error as NSError {
-                debugPrint(
+                debug(
+                    .coreData,
                     "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to update Contact Trick Entry with error: \(error.userInfo)"
                 )
             }

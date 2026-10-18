@@ -24,7 +24,7 @@ extension Adjustments.StateModel {
 
             updateLatestOverrideConfiguration()
         } catch {
-            debugPrint("\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to enact Override Preset")
+            debug(.default, "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to enact Override Preset")
         }
     }
 
@@ -196,7 +196,8 @@ extension Adjustments.StateModel {
             }
             overridePresets = overrideObjects
         } catch {
-            debugPrint(
+            debug(
+                .default,
                 "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to extract Overrides: \(error)"
             )
         }
@@ -254,7 +255,7 @@ extension Adjustments.StateModel {
                 await resetStateVariables()
             }
         } catch {
-            debugPrint("\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to update latest Override configuration")
+            debug(.default, "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to update latest Override configuration")
         }
     }
 
@@ -272,7 +273,8 @@ extension Adjustments.StateModel {
                 activeOverrideName = overrideToEdit.name ?? String(localized: "Custom Override")
             }
         } catch {
-            debugPrint(
+            debug(
+                .default,
                 "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to set active Override: \(error)"
             )
         }
@@ -296,7 +298,8 @@ extension Adjustments.StateModel {
                 activeOverrideName = overrideToEdit.name ?? String(localized: "Custom Override")
             }
         } catch {
-            debugPrint(
+            debug(
+                .default,
                 "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to cancel previous Override: \(error)"
             )
         }

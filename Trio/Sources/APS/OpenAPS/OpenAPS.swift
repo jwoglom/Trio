@@ -96,7 +96,7 @@ final class OpenAPS {
                 guard context.hasChanges else { return }
                 try context.save()
             } catch {
-                debugPrint("\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to save Determination to Core Data")
+                debug(.openAPS, "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to save Determination to Core Data")
             }
         }
     }
@@ -757,7 +757,7 @@ final class OpenAPS {
                 guard context.hasChanges else { return }
                 try context.save()
             } catch {
-                print(error.localizedDescription)
+                debug(.openAPS, error.localizedDescription)
             }
         }
     }

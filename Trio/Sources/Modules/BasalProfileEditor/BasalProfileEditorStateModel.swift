@@ -138,7 +138,7 @@ extension BasalProfileEditor {
                     }
                 } receiveValue: {
                     // Handle any successful value if needed
-                    print("We were successful")
+                    debug(.default, "We were successful")
                 }
                 .store(in: &lifetime)
         }

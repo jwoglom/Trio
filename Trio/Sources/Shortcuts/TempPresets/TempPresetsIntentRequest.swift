@@ -26,7 +26,7 @@ final class TempPresetsIntentRequest: BaseIntentsRequest {
             // Fetch existing TempTargetStored objects based on their NSManagedObjectIDs
             let tempTargetObjects: [TempTargetStored] = allTempTargetPresetsIDs.compactMap { id in
                 guard let object = try? context.existingObject(with: id) as? TempTargetStored else {
-                    debugPrint("\(#file) \(#function) Failed to fetch object for ID: \(id)")
+                    debug(.default, "\(#file) \(#function) Failed to fetch object for ID: \(id)")
                     return nil
                 }
                 return object
@@ -39,7 +39,7 @@ final class TempPresetsIntentRequest: BaseIntentsRequest {
                       let target = object.target?.decimalValue,
                       let duration = object.duration?.decimalValue
                 else {
-                    debugPrint("\(#file) \(#function) Missing data for TempTargetStored object.")
+                    debug(.default, "\(#file) \(#function) Missing data for TempTargetStored object.")
                     throw TempPresetsError.noTempTargetFound
                 }
                 return TempPreset(id: id, name: name, targetTop: target, duration: duration)
@@ -63,7 +63,10 @@ final class TempPresetsIntentRequest: BaseIntentsRequest {
                 let result = try context.fetch(fetchRequest)
 
                 if result.isEmpty {
-                    debugPrint("\(DebuggingIdentifiers.failed) \(#file) \(#function) No TempTargetStored found for ids: \(uuid)")
+                    debug(
+                        .default,
+                        "\(DebuggingIdentifiers.failed) \(#file) \(#function) No TempTargetStored found for ids: \(uuid)"
+                    )
                     return [TempPreset(id: UUID(), name: "", duration: 0)]
                 }
 
@@ -75,7 +78,8 @@ final class TempPresetsIntentRequest: BaseIntentsRequest {
                     )
                 }
             } catch let error as NSError {
-                debugPrint(
+                debug(
+                    .default,
                     "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to fetch TempTarget: \(error)"
                 )
                 return [TempPreset(id: UUID(), name: "", duration: 0)]
@@ -103,7 +107,8 @@ final class TempPresetsIntentRequest: BaseIntentsRequest {
             debug(.default, "Finished. Temp Target enacted via Shortcut.")
             return true
         } catch {
-            debugPrint(
+            debug(
+                .default,
                 "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to enact Temp Target with error: \(error)"
             )
             return false
@@ -121,7 +126,8 @@ final class TempPresetsIntentRequest: BaseIntentsRequest {
         } catch AdjustmentError.nothingActive {
             debug(.default, "No active temp target to cancel")
         } catch {
-            debugPrint(
+            debug(
+                .default,
                 "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to cancel Temp Target with error: \(error)"
             )
         }

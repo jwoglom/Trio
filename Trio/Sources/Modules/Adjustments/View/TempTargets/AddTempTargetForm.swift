@@ -344,7 +344,7 @@ struct AddTempTargetForm: View {
         guard let targetValue = NSDecimalNumber(decimal: target).doubleValue as Double?,
               let stepValue = NSDecimalNumber(decimal: step).doubleValue as Double?
         else {
-            print("Failed to unwrap target or step as NSDecimalNumber")
+            debug(.default, "Failed to unwrap target or step as NSDecimalNumber")
             return target
         }
 

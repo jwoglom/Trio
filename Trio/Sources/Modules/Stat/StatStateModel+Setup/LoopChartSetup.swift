@@ -138,7 +138,7 @@ extension Stat.StateModel {
             do {
                 return try viewContext.existingObject(with: id) as? LoopStatRecord
             } catch {
-                debugPrint("\(DebuggingIdentifiers.failed) Error fetching loop stat: \(error)")
+                debug(.default, "\(DebuggingIdentifiers.failed) Error fetching loop stat: \(error)")
                 return nil
             }
         }

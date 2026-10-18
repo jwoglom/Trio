@@ -62,7 +62,7 @@ extension Home.StateModel {
 
             Foundation.NotificationCenter.default.post(name: .didUpdateOverrideConfiguration, object: nil)
         } catch let error as NSError {
-            debugPrint("\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to cancel Profile with error: \(error)")
+            debug(.default, "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to cancel Profile with error: \(error)")
         }
     }
 
@@ -81,7 +81,8 @@ extension Home.StateModel {
             guard viewContext.hasChanges else { return }
             try viewContext.save()
         } catch let error as NSError {
-            debugPrint(
+            debug(
+                .default,
                 "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to save an Override to the OverrideRunStored entity with error: \(error)"
             )
         }

@@ -214,7 +214,8 @@ final class BaseOverrideStorage: @preconcurrency OverrideStorage, Injectable {
                 guard self.viewContext.hasChanges else { return }
                 try self.viewContext.save()
             } catch let error as NSError {
-                debugPrint(
+                debug(
+                    .coreData,
                     "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to copy Override with error: \(error.userInfo)"
                 )
             }
@@ -232,7 +233,7 @@ final class BaseOverrideStorage: @preconcurrency OverrideStorage, Injectable {
         await taskContext.perform {
             do {
                 guard let override = try taskContext.existingObject(with: objectID) as? OverrideStored else {
-                    debugPrint("Override for batch delete not found. \(DebuggingIdentifiers.failed)")
+                    debug(.coreData, "Override for batch delete not found. \(DebuggingIdentifiers.failed)")
                     return
                 }
 
@@ -241,11 +242,12 @@ final class BaseOverrideStorage: @preconcurrency OverrideStorage, Injectable {
                 guard taskContext.hasChanges else { return }
                 try taskContext.save()
 
-                debugPrint(
+                debug(
+                    .coreData,
                     "OverrideStorage: \(#function) \(DebuggingIdentifiers.succeeded) deleted override from core data"
                 )
             } catch {
-                debugPrint("\(DebuggingIdentifiers.failed) Error deleting override: \(error)")
+                debug(.coreData, "\(DebuggingIdentifiers.failed) Error deleting override: \(error)")
             }
         }
     }

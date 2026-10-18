@@ -19,7 +19,7 @@ extension History.StateModel {
             let authenticated = try await unlockmanager.unlock()
 
             guard authenticated else {
-                debugPrint("\(DebuggingIdentifiers.failed) \(#file) \(#function) Authentication Error")
+                debug(.default, "\(DebuggingIdentifiers.failed) \(#file) \(#function) Authentication Error")
                 return
             }
 
@@ -42,7 +42,8 @@ extension History.StateModel {
             // Perform a determine basal sync to update iob
             try await apsManager.determineBasalSync()
         } catch {
-            debugPrint(
+            debug(
+                .default,
                 "\(DebuggingIdentifiers.failed) \(#file) \(#function) Error while Insulin Deletion Task: \(error)"
             )
             await MainActor.run {

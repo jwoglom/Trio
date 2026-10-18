@@ -91,10 +91,13 @@ final class StateIntentRequest: BaseIntentsRequest {
                                 .asMmolL : Decimal($0)
                         ) as NSNumber)!
                 } ?? "--"
-            debugPrint("StateIntentRequest: \(#function) \(DebuggingIdentifiers.succeeded) fetched latest 2 glucose values")
+            debug(.default, "StateIntentRequest: \(#function) \(DebuggingIdentifiers.succeeded) fetched latest 2 glucose values")
             return (lastValue.date ?? Date(), glucoseAsString, directionAsString, deltaAsString)
         } catch {
-            debugPrint("StateIntentRequest: \(#function) \(DebuggingIdentifiers.failed) failed to fetch latest 2 glucose values")
+            debug(
+                .default,
+                "StateIntentRequest: \(#function) \(DebuggingIdentifiers.failed) failed to fetch latest 2 glucose values"
+            )
             return (Date(), "", "", "")
         }
     }

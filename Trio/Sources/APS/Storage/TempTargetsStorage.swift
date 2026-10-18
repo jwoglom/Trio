@@ -213,7 +213,7 @@ final class BaseTempTargetsStorage: TempTargetsStorage, Injectable {
                 let results = try context.fetch(fetchRequest)
                 return !results.isEmpty
             } catch let error as NSError {
-                debugPrint("\(DebuggingIdentifiers.failed) Failed to check for existing Temp Target: \(error)")
+                debug(.coreData, "\(DebuggingIdentifiers.failed) Failed to check for existing Temp Target: \(error)")
                 return false
             }
         }
@@ -238,7 +238,8 @@ final class BaseTempTargetsStorage: TempTargetsStorage, Injectable {
                 guard self.viewContext.hasChanges else { return }
                 try self.viewContext.save()
             } catch let error as NSError {
-                debugPrint(
+                debug(
+                    .coreData,
                     "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to copy Temp Target with error: \(error.userInfo)"
                 )
             }

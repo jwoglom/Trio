@@ -59,7 +59,7 @@ extension AutotuneConfig {
                         lastAutotuneDate = Date()
                     }
                 } catch {
-                    debugPrint("\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to run Autotune")
+                    debug(.service, "\(DebuggingIdentifiers.failed) \(#file) \(#function) Failed to run Autotune")
                 }
             }
         }

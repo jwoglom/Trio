@@ -740,7 +740,7 @@ extension Treatments {
                     guard viewContext.hasChanges else { return }
                     try viewContext.save()
                 } catch {
-                    print(error.localizedDescription)
+                    debug(.default, error.localizedDescription)
                 }
                 carbs = 0
                 fat = 0
@@ -947,7 +947,7 @@ extension Treatments.StateModel {
         debug(.bolusState, "updateForecasts fired")
         if let forecastData = forecastData {
             simulatedDetermination = forecastData
-            debugPrint("\(DebuggingIdentifiers.failed) minPredBG: \(minPredBG)")
+            debug(.bolusState, "\(DebuggingIdentifiers.failed) minPredBG: \(minPredBG)")
         } else {
             let simulated = await Task { [self] in
                 debug(.bolusState, "calling simulateDetermineBasal to get forecast data")
@@ -966,7 +966,7 @@ extension Treatments.StateModel {
             if let simDetermination = simulated {
                 evBG = Decimal(simDetermination.eventualBG ?? 0)
                 minPredBG = simDetermination.minPredBGFromReason ?? 0
-                debugPrint("\(DebuggingIdentifiers.inProgress) minPredBG: \(minPredBG)")
+                debug(.bolusState, "\(DebuggingIdentifiers.inProgress) minPredBG: \(minPredBG)")
             }
         }
 
