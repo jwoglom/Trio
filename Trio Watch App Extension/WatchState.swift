@@ -85,6 +85,7 @@ import WatchConnectivity
         localized: "Error! Bolus amount must be greater than 0 U.",
         comment: "Error message when a bolus of zero or less is requested"
     )
+    var pendingBolusOverride: PendingBolusOverride?
 
     // Bolus calculation progress
     var showBolusCalculationProgress: Bool = false
@@ -414,6 +415,23 @@ import WatchConnectivity
                 case .comboComplete:
                     self.isMealBolusCombo = false
                     self.handleAcknowledgment(success: acknowledged, message: ackMessage, isFinal: true)
+                case .bolusNeedsOverride:
+                    self.isMealBolusCombo = false
+                    if let amount = message[WatchMessageKeys.bolus] as? NSNumber,
+                       let overriddenChecks = message[WatchMessageKeys.overriddenBolusChecks] as? [String]
+                    {
+                        // The phone answered, so stop waiting for an acknowledgment while the user decides
+                        self.acknowledgmentTimeoutWorkItem?.cancel()
+                        self.acknowledgmentTimeoutWorkItem = nil
+                        self.showCommsAnimation = false
+                        self.pendingBolusOverride = PendingBolusOverride(
+                            amount: amount.decimalValue,
+                            reason: ackMessage,
+                            overriddenChecks: overriddenChecks
+                        )
+                    } else {
+                        self.handleAcknowledgment(success: false, message: ackMessage, isFinal: true)
+                    }
                 default:
                     self.isMealBolusCombo = false
                     self.handleAcknowledgment(success: acknowledged, message: ackMessage, isFinal: true)

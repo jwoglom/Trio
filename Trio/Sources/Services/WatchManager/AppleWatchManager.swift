@@ -590,17 +590,22 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
         WatchStateSnapshot.saveLatestDateToDisk(state.date)
     }
 
-    func sendAcknowledgment(toWatch success: Bool, message: String = "", ackCode: AcknowledgmentCode) {
+    func sendAcknowledgment(
+        toWatch success: Bool,
+        message: String = "",
+        ackCode: AcknowledgmentCode,
+        details: [String: Any] = [:]
+    ) {
         guard let session = session, session.isReachable else {
             debug(.watch, "Watch not reachable, acknowledgment not sent")
             return
         }
 
-        let ackMessage: [String: Any] = [
+        let ackMessage: [String: Any] = details.merging([
             WatchMessageKeys.acknowledged: success,
             WatchMessageKeys.message: message,
             WatchMessageKeys.ackCode: ackCode.rawValue
-        ]
+        ]) { _, ack in ack }
 
         session.sendMessage(ackMessage, replyHandler: nil) { error in
             warning(.watch, "Sending acknowledgment to watch failed", error: error)
@@ -657,7 +662,7 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
                       message[WatchMessageKeys.date] == nil
             {
                 info(.watch, "Watch requested bolus of \(bolusAmount) U")
-                self.handleBolusRequest(Decimal(bolusAmount))
+                self.handleBolusRequest(Decimal(bolusAmount), overriding: self.overriddenBolusChecks(in: message))
             } else if let carbsAmount = message[WatchMessageKeys.carbs] as? Int,
                       let timestamp = message[WatchMessageKeys.date] as? TimeInterval,
                       message[WatchMessageKeys.bolus] == nil
@@ -671,7 +676,12 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
             {
                 let date = Date(timeIntervalSince1970: timestamp)
                 info(.watch, "Watch requested bolus of \(bolusAmount) U with \(carbsAmount) g carbs at \(date)")
-                self.handleCombinedRequest(bolusAmount: Decimal(bolusAmount), carbsAmount: Decimal(carbsAmount), date: date)
+                self.handleCombinedRequest(
+                    bolusAmount: Decimal(bolusAmount),
+                    carbsAmount: Decimal(carbsAmount),
+                    date: date,
+                    overriding: self.overriddenBolusChecks(in: message)
+                )
             } else if message[WatchMessageKeys.cancelOverride] == nil,
                       message[WatchMessageKeys.activateOverride] == nil,
                       message[WatchMessageKeys.cancelTempTarget] == nil,
@@ -809,14 +819,12 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
     }
 
     /// Processes bolus requests received from the Watch
-    /// - Parameter amount: The requested bolus amount in units
-    private func handleBolusRequest(_ amount: Decimal) {
+    /// - Parameters:
+    ///   - amount: The requested bolus amount in units
+    ///   - overriding: Safety checks the user has confirmed on the Watch to bolus through
+    private func handleBolusRequest(_ amount: Decimal, overriding: Set<BolusSafetyCheck>) {
         Task {
-            if let rejection = await bolusSafetyRejection(for: amount) {
-                warning(.watch, "Watch bolus of \(amount) U blocked: \(rejection)")
-                sendAcknowledgment(toWatch: false, message: rejection, ackCode: .genericFailure)
-                return
-            }
+            guard await passesBolusSafetyChecks(amount, overriding: overriding) else { return }
 
             await apsManager.enactBolus(amount: Double(amount), isSMB: false) { success, message in
                 // Acknowledge success or error of bolus
@@ -830,24 +838,66 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
         }
     }
 
-    /// Runs the shared bolus safety checks (max bolus, max IOB, recent boluses) on a bolus requested from the Watch.
-    /// - Parameter amount: The requested bolus amount in units
-    /// - Returns: `nil` if the bolus may be enacted, otherwise the message explaining why it was blocked
-    private func bolusSafetyRejection(for amount: Decimal) async -> String? {
+    /// Runs the shared bolus safety checks (max bolus, max IOB, recent boluses) on a bolus requested from the Watch,
+    /// and tells the Watch when one fails.
+    ///
+    /// A failed check the user may bolus through, like on the main bolus screen, is sent as `.bolusNeedsOverride`
+    /// with the checks to send back if they confirm. Max bolus, and checks that cannot run, block the bolus.
+    /// - Parameters:
+    ///   - amount: The requested bolus amount in units
+    ///   - overriding: Safety checks the user has already confirmed on the Watch to bolus through
+    /// - Returns: `true` if the bolus may be enacted
+    private func passesBolusSafetyChecks(_ amount: Decimal, overriding: Set<BolusSafetyCheck>) async -> Bool {
+        let result: BolusSafetyResult
         do {
-            switch try await bolusSafetyValidator.validate(bolusAmount: amount) {
-            case .allowed:
-                return nil
-            case let .rejected(reason):
-                return reason.localizedMessage(requestedAmount: amount)
-            }
+            result = try await bolusSafetyValidator.validate(bolusAmount: amount, lookbackStart: nil, overriding: overriding)
         } catch let checksError {
             error(.watch, "Bolus safety checks for watch bolus failed", error: checksError)
-            return String(
-                localized: "Bolus blocked: the safety checks could not be completed.",
-                comment: "Error message sent to watch when the bolus safety checks fail to run"
+            sendAcknowledgment(
+                toWatch: false,
+                message: String(
+                    localized: "Bolus blocked: the safety checks could not be completed.",
+                    comment: "Error message sent to watch when the bolus safety checks fail to run"
+                ),
+                ackCode: .genericFailure
             )
+            return false
         }
+
+        guard case let .rejected(reason) = result else {
+            if !overriding.isEmpty {
+                info(
+                    .watch,
+                    "User confirmed watch bolus of \(amount) U past safety checks: \(overriding.map(\.rawValue).sorted())"
+                )
+            }
+            return true
+        }
+
+        let message = reason.localizedMessage(requestedAmount: amount)
+        guard reason.check.canBeOverridden else {
+            warning(.watch, "Watch bolus of \(amount) U blocked: \(message)")
+            sendAcknowledgment(toWatch: false, message: message, ackCode: .genericFailure)
+            return false
+        }
+
+        info(.watch, "Asking watch to confirm bolus of \(amount) U past safety check: \(message)")
+        sendAcknowledgment(
+            toWatch: false,
+            message: message,
+            ackCode: .bolusNeedsOverride,
+            details: [
+                WatchMessageKeys.bolus: NSDecimalNumber(decimal: amount),
+                WatchMessageKeys.overriddenBolusChecks: overriding.union([reason.check]).map(\.rawValue).sorted()
+            ]
+        )
+        return false
+    }
+
+    /// Reads the safety checks a Watch bolus request says the user confirmed to bolus through.
+    private func overriddenBolusChecks(in message: [String: Any]) -> Set<BolusSafetyCheck> {
+        let rawValues = message[WatchMessageKeys.overriddenBolusChecks] as? [String] ?? []
+        return Set(rawValues.compactMap(BolusSafetyCheck.init(rawValue:)))
     }
 
     /// Handles carbs entry requests received from the Watch
@@ -906,22 +956,14 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
     ///   - bolusAmount: The bolus amount in units
     ///   - carbsAmount: The carbs amount in grams
     ///   - date: Timestamp for the carbs entry
-    private func handleCombinedRequest(bolusAmount: Decimal, carbsAmount: Decimal, date: Date) {
+    ///   - overriding: Safety checks the user has confirmed on the Watch to bolus through
+    private func handleCombinedRequest(
+        bolusAmount: Decimal,
+        carbsAmount: Decimal,
+        date: Date,
+        overriding: Set<BolusSafetyCheck>
+    ) {
         Task {
-            // Check the bolus before saving anything, so a blocked request logs neither carbs nor bolus
-            if let rejection = await bolusSafetyRejection(for: bolusAmount) {
-                warning(.watch, "Watch bolus of \(bolusAmount) U with carbs blocked: \(rejection)")
-                sendAcknowledgment(
-                    toWatch: false,
-                    message: rejection + " " + String(
-                        localized: "Carbs were not logged.",
-                        comment: "Appended to the message sent to watch when a carbs and bolus request is blocked"
-                    ),
-                    ackCode: .genericFailure
-                )
-                return
-            }
-
             let context = CoreDataStack.shared.newTaskContext()
 
             do {
@@ -959,6 +1001,9 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
                     try context.save()
                     debug(.treatments, "Saved \(carbsAmount) g carbs from watch")
                 }
+
+                // The carbs stay logged if the bolus is blocked or needs the user to confirm it
+                guard await passesBolusSafetyChecks(bolusAmount, overriding: overriding) else { return }
 
                 // Notify Watch: "Enacting bolus..."
                 sendAcknowledgment(
@@ -1205,5 +1250,7 @@ extension BaseWatchManager {
         case tempTargetStopped = "temp_target_stopped"
         case genericSuccess = "success"
         case genericFailure = "failure"
+        /// A bolus failed a safety check the user may confirm on the Watch to bolus through.
+        case bolusNeedsOverride = "bolus_needs_override"
     }
 }
