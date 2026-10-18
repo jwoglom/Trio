@@ -68,7 +68,7 @@ actor WatchLogger {
             return
         }
 
-        let payload: [String: Any] = ["watchLogs": logs.joined(separator: "\n")]
+        let payload: [String: Any] = [WatchMessageKeys.watchLogs: logs.joined(separator: "\n")]
 
         if session.activationState != .activated {
             session.activate()
@@ -129,7 +129,7 @@ actor WatchLogger {
               !logString.isEmpty
         else { return }
 
-        let payload: [String: Any] = ["watchLogs": logString]
+        let payload: [String: Any] = [WatchMessageKeys.watchLogs: logString]
 
         if session.activationState != .activated {
             session.activate()
