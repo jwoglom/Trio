@@ -36,8 +36,8 @@ extension WatchState {
     /// Sends a bolus insulin request to the paired iPhone
     /// - Parameters:
     ///   - amount: The insulin amount to be delivered
-    ///   - overriddenChecks: Safety checks the user confirmed to bolus through, as sent by the phone
-    func sendBolusRequest(_ amount: Decimal, overriding overriddenChecks: [String] = []) {
+    ///   - pendingOverride: The phone's request to confirm past failed safety checks, if the user just confirmed it
+    func sendBolusRequest(_ amount: Decimal, confirming pendingOverride: PendingBolusOverride? = nil) {
         pendingBolusOverride = nil
 
         guard amount > 0 else {
@@ -48,13 +48,17 @@ extension WatchState {
 
         guard let session = reachableSession(.bolus, notSentLog: "Bolus request not sent, phone unreachable") else { return }
 
-        WatchLogger.shared.info(.bolus, "Bolus of \(amount) U requested, overriding: \(overriddenChecks)")
+        WatchLogger.shared.info(
+            .bolus,
+            "Bolus of \(amount) U requested, overriding: \(pendingOverride?.overriddenChecks ?? [])"
+        )
 
         var message: [String: Any] = [
             WatchMessageKeys.bolus: amount
         ]
-        if !overriddenChecks.isEmpty {
-            message[WatchMessageKeys.overriddenBolusChecks] = overriddenChecks
+        if let pendingOverride {
+            message[WatchMessageKeys.overriddenBolusChecks] = pendingOverride.overriddenChecks
+            message[WatchMessageKeys.bolusOverrideIssuedAt] = pendingOverride.issuedAt
         }
 
         send(message, on: session, .bolus, failureLog: "Sending bolus request failed")

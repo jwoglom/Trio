@@ -132,7 +132,7 @@ private struct BolusOverrideConfirmationView: View {
 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     // Every outcome, including an unreachable phone, ends in an acknowledgment banner
-                    state.sendBolusRequest(pendingBolusOverride.amount, overriding: pendingBolusOverride.overriddenChecks)
+                    state.sendBolusRequest(pendingBolusOverride.amount, confirming: pendingBolusOverride)
                 }
             } else if newValue > 0 {
                 WKInterfaceDevice.current().play(.click)
