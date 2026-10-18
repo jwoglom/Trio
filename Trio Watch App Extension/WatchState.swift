@@ -487,9 +487,9 @@ import WatchConnectivity
 
         if let glucoseData = message[WatchMessageKeys.glucoseValues] as? [[String: Any]] {
             glucoseValues = glucoseData.compactMap { data in
-                guard let glucose = data["glucose"] as? Double,
-                      let timestamp = data["date"] as? TimeInterval,
-                      let colorString = data["color"] as? String
+                guard let glucose = data[WatchMessageKeys.glucose] as? Double,
+                      let timestamp = data[WatchMessageKeys.date] as? TimeInterval,
+                      let colorString = data[WatchMessageKeys.color] as? String
                 else { return nil }
 
                 return (
@@ -515,8 +515,8 @@ import WatchConnectivity
 
         if let overrideData = message[WatchMessageKeys.overridePresets] as? [[String: Any]] {
             overridePresets = overrideData.compactMap { data in
-                guard let name = data["name"] as? String,
-                      let isEnabled = data["isEnabled"] as? Bool
+                guard let name = data[WatchMessageKeys.name] as? String,
+                      let isEnabled = data[WatchMessageKeys.isEnabled] as? Bool
                 else { return nil }
                 return OverridePresetWatch(name: name, isEnabled: isEnabled)
             }
@@ -524,8 +524,8 @@ import WatchConnectivity
 
         if let tempTargetData = message[WatchMessageKeys.tempTargetPresets] as? [[String: Any]] {
             tempTargetPresets = tempTargetData.compactMap { data in
-                guard let name = data["name"] as? String,
-                      let isEnabled = data["isEnabled"] as? Bool
+                guard let name = data[WatchMessageKeys.name] as? String,
+                      let isEnabled = data[WatchMessageKeys.isEnabled] as? Bool
                 else { return nil }
                 return TempTargetPresetWatch(name: name, isEnabled: isEnabled)
             }

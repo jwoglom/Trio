@@ -44,6 +44,12 @@ enum WatchMessageKeys {
     static let overridePresets = "overridePresets"
     static let tempTargetPresets = "tempTargetPresets"
 
+    // Keys inside each glucoseValues entry and each override/temp target preset entry
+    static let glucose = "glucose"
+    static let color = "color"
+    static let name = "name"
+    static let isEnabled = "isEnabled"
+
     // Limits and Settings Keys
     static let maxBolus = "maxBolus"
     static let maxCarbs = "maxCarbs"
@@ -54,6 +60,9 @@ enum WatchMessageKeys {
 
     // Notification Actions
     static let snoozeDuration = "snoozeDuration"
+
+    // Watch Logs
+    static let watchLogs = "watchLogs"
 
     // Forecast
     static let showForecastWatch = "showForecastWatch"

@@ -519,23 +519,23 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
             WatchMessageKeys.lastLoopTime: state.lastLoopTime ?? "",
             WatchMessageKeys.glucoseValues: state.glucoseValues.map { value in
                 [
-                    "glucose": value.glucose,
-                    "date": value.date.timeIntervalSince1970,
-                    "color": value.color
+                    WatchMessageKeys.glucose: value.glucose,
+                    WatchMessageKeys.date: value.date.timeIntervalSince1970,
+                    WatchMessageKeys.color: value.color
                 ]
             },
             WatchMessageKeys.minYAxisValue: state.minYAxisValue,
             WatchMessageKeys.maxYAxisValue: state.maxYAxisValue,
             WatchMessageKeys.overridePresets: state.overridePresets.map { preset in
                 [
-                    "name": preset.name,
-                    "isEnabled": preset.isEnabled
+                    WatchMessageKeys.name: preset.name,
+                    WatchMessageKeys.isEnabled: preset.isEnabled
                 ]
             },
             WatchMessageKeys.tempTargetPresets: state.tempTargetPresets.map { preset in
                 [
-                    "name": preset.name,
-                    "isEnabled": preset.isEnabled
+                    WatchMessageKeys.name: preset.name,
+                    WatchMessageKeys.isEnabled: preset.isEnabled
                 ]
             },
             WatchMessageKeys.maxBolus: state.maxBolus,
@@ -644,7 +644,7 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
 
     func session(_: WCSession, didReceiveMessage message: [String: Any]) {
         // Handle logs first - doesn't need self, so it can run even during teardown
-        if let logs = message["watchLogs"] as? String {
+        if let logs = message[WatchMessageKeys.watchLogs] as? String {
             SimpleLogReporter.appendToWatchLog(logs)
         }
 
@@ -784,7 +784,7 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
     }
 
     func session(_: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
-        if let logs = userInfo["watchLogs"] as? String {
+        if let logs = userInfo[WatchMessageKeys.watchLogs] as? String {
             SimpleLogReporter.appendToWatchLog(logs)
         }
 
