@@ -10,6 +10,7 @@ struct ReportProblemView: View {
     @State private var reportToDelete: SentReport?
     @State private var deletingID: String?
     @State private var deleteError: ReportSubmitError?
+    @State private var showAdvancedOptions = false
 
     var body: some View {
         List {
@@ -76,6 +77,23 @@ struct ReportProblemView: View {
         .background(appState.trioBackgroundColor(for: colorScheme))
         .navigationTitle("Report a Problem")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button {
+                        showAdvancedOptions = true
+                    } label: {
+                        Label("Advanced Options", systemImage: "gearshape")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .accessibilityLabel(Text("More"))
+                }
+            }
+        }
+        .navigationDestination(isPresented: $showAdvancedOptions) {
+            ReportProblemAdvancedView()
+        }
         .onAppear { sentReports = SentReports.load() }
         .alert(
             "Couldn't Delete Report",

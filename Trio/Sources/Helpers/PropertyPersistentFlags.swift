@@ -25,6 +25,14 @@ final class PropertyPersistentFlags {
     // TODO: This flag can be deleted in March 2027. Check the commit for other places to cleanup.
     @PersistedProperty(key: "hasSeenFatProteinOrderChange") var hasSeenFatProteinOrderChange: Bool?
 
+    // MARK: - Auto-save Logs
+
+    //
+    // See Trio/Sources/Logger/Export/LogAutoSave.swift.
+    // `autoSaveLogsLastSlot` is the 12:01 am the latest daily file was saved for.
+    @PersistedProperty(key: "autoSaveLogsEnabled") var autoSaveLogsEnabled: Bool?
+    @PersistedProperty(key: "autoSaveLogsLastSlot") var autoSaveLogsLastSlot: Date?
+
     // MARK: - Telemetry
 
     //
