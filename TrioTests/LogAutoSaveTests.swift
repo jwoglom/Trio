@@ -44,8 +44,10 @@ import Testing
         #expect(LogAutoSave.isDue(now: Self.date(2026, 11, 2, 0, 1), lastSlot: slot, calendar: Self.calendar))
     }
 
-    @Test("File is named after the local date it is saved") func fileName() {
-        #expect(LogAutoSave.fileName(for: Self.date(2026, 11, 1, 0, 1), timeZone: Self.timeZone) == "2026-11-01.zip")
-        #expect(LogAutoSave.fileName(for: Self.date(2026, 1, 5, 23, 59), timeZone: Self.timeZone) == "2026-01-05.zip")
+    @Test("File is named after the day it covers") func fileName() {
+        #expect(LogAutoSave.fileName(forSlot: Self.date(2026, 11, 1, 0, 1), calendar: Self.calendar) == "2026-10-31.zip")
+        #expect(LogAutoSave.fileName(forSlot: Self.date(2026, 1, 1, 0, 1), calendar: Self.calendar) == "2025-12-31.zip")
+        // The day after clocks go back still names the day before
+        #expect(LogAutoSave.fileName(forSlot: Self.date(2026, 11, 2, 0, 1), calendar: Self.calendar) == "2026-11-01.zip")
     }
 }

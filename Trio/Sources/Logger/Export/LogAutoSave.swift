@@ -60,13 +60,15 @@ final class LogAutoSave: Injectable {
         return lastSlot < latestSlot(atOrBefore: now, calendar: calendar)
     }
 
-    static func fileName(for date: Date, timeZone: TimeZone = .current) -> String {
+    /// Named after the day that ended at the slot's midnight, which the 24 hours of logs cover.
+    static func fileName(forSlot slot: Date, calendar: Calendar = .current) -> String {
+        let coveredDay = calendar.startOfDay(for: slot).addingTimeInterval(-1)
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.timeZone = timeZone
+        formatter.timeZone = calendar.timeZone
         formatter.dateFormat = "yyyy-MM-dd"
-        return "\(formatter.string(from: date)).zip"
+        return "\(formatter.string(from: coveredDay)).zip"
     }
 
     static func folderURL() throws -> URL {
@@ -91,9 +93,10 @@ final class LogAutoSave: Injectable {
             // Same file as Share Trio Logs > All Logs > Last 24 Hours
             let file = try await logExport.makeFile(.all, days: 1)
             defer { LogExport.discard(file) }
-            let name = Self.fileName(for: now)
+            let slot = Self.latestSlot(atOrBefore: now)
+            let name = Self.fileName(forSlot: slot)
             try Self.store(file, as: name)
-            PropertyPersistentFlags.shared.autoSaveLogsLastSlot = Self.latestSlot(atOrBefore: now)
+            PropertyPersistentFlags.shared.autoSaveLogsLastSlot = slot
             retryAfter = nil
             info(.storage, "Auto-saved logs to \(Self.folderName)/\(name)")
         } catch {

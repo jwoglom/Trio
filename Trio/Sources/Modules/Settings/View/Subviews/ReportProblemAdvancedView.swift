@@ -22,7 +22,7 @@ struct ReportProblemAdvancedView: View {
                 },
                 footer: {
                     Text(
-                        "Saved shortly after midnight as a dated .zip file in the Files app, under Trio › SavedLogs. Each file has the last 24 hours of logs, including glucose, insulin and carbs; passwords and serial numbers are removed. If Trio isn't running at midnight, the file is saved the next time it runs. Files stay on this device until you delete them."
+                        "Saved shortly after midnight as a .zip file named after the day it covers, in the Files app under Trio › SavedLogs. Each file has the last 24 hours of logs, including glucose, insulin and carbs; passwords and serial numbers are removed. If Trio isn't running at midnight, the file is saved the next time it runs. Files stay on this device until you delete them."
                     )
                 }
             )
