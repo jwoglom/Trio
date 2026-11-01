@@ -1132,6 +1132,7 @@
 		CA0924000000000000000002 /* GRICalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA0924000000000000000001 /* GRICalculator.swift */; };
 		CA0924000000000000000004 /* GRIView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA0924000000000000000003 /* GRIView.swift */; };
 		CA0924000000000000000006 /* GRICalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA0924000000000000000005 /* GRICalculatorTests.swift */; };
+		AE11C0DE0000000000000002 /* HealthKitSampleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE11C0DE0000000000000001 /* HealthKitSampleTests.swift */; };
 		FF42480CF46A31D00C817D8C /* WatchLogEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5D79872B74ADDBDD11682D0 /* WatchLogEntry.swift */; };
 /* End PBXBuildFile section */
 
@@ -2354,6 +2355,7 @@
 		CA0924000000000000000001 /* GRICalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GRICalculator.swift; sourceTree = "<group>"; };
 		CA0924000000000000000003 /* GRIView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GRIView.swift; sourceTree = "<group>"; };
 		CA0924000000000000000005 /* GRICalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GRICalculatorTests.swift; sourceTree = "<group>"; };
+		AE11C0DE0000000000000001 /* HealthKitSampleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitSampleTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -3540,6 +3542,7 @@
 				DDDD0FFD2F4E231600F9C645 /* Mocks */,
 				DDDD0FFA2F4E22C000F9C645 /* GlucoseSmoothingTests.swift */,
 				CA0924000000000000000005 /* GRICalculatorTests.swift */,
+				AE11C0DE0000000000000001 /* HealthKitSampleTests.swift */,
 				DDDD0FFC2F4E22C000F9C645 /* GlucoseNativeConversionTests.swift */,
 				DDDD10A02F4E22C000F9C645 /* CarbsNativeConversionTests.swift */,
 				DDDD10B02F4E22C000F9C645 /* PumpHistoryNativeConversionTests.swift */,
@@ -6539,6 +6542,7 @@
 				782BE9AEFDD94938A6F3EFE9 /* NightscoutImportRoundTripTests.swift in Sources */,
 				DDDD0FFB2F4E22C000F9C645 /* GlucoseSmoothingTests.swift in Sources */,
 				CA0924000000000000000006 /* GRICalculatorTests.swift in Sources */,
+				AE11C0DE0000000000000002 /* HealthKitSampleTests.swift in Sources */,
 				DDDD0FFD2F4E22C000F9C645 /* GlucoseNativeConversionTests.swift in Sources */,
 				DDDD10A12F4E22C000F9C645 /* CarbsNativeConversionTests.swift in Sources */,
 				DDDD10B12F4E22C000F9C645 /* PumpHistoryNativeConversionTests.swift in Sources */,

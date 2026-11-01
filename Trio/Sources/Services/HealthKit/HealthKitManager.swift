@@ -212,9 +212,10 @@ final class BaseHealthKitManager: HealthKitManager, Injectable {
             let glucoseSamples = glucose.compactMap { glucoseSample -> HKQuantitySample? in
                 guard let glucoseValue = glucoseSample.glucose else { return nil }
 
-                return HKQuantitySample(
+                return HKQuantitySample.checked(
                     type: sampleType,
-                    quantity: HKQuantity(unit: .milligramsPerDeciliter, doubleValue: Double(glucoseValue)),
+                    unit: .milligramsPerDeciliter,
+                    value: Double(glucoseValue),
                     start: glucoseSample.dateString,
                     end: glucoseSample.dateString,
                     metadata: [
@@ -296,50 +297,50 @@ final class BaseHealthKitManager: HealthKitManager, Injectable {
 
                 // Carbs Sample (only if value is greater than 0)
                 let carbValue = allSamples.carbs
-                if carbValue > 0 {
-                    let carbSample = HKQuantitySample(
-                        type: carbSampleType,
-                        quantity: HKQuantity(unit: .gram(), doubleValue: Double(carbValue)),
-                        start: startDate,
-                        end: startDate,
-                        metadata: [
-                            HKMetadataKeyExternalUUID: id,
-                            HKMetadataKeySyncIdentifier: id,
-                            HKMetadataKeySyncVersion: 1
-                        ]
-                    )
+                if carbValue > 0, let carbSample = HKQuantitySample.checked(
+                    type: carbSampleType,
+                    unit: .gram(),
+                    value: Double(carbValue),
+                    start: startDate,
+                    end: startDate,
+                    metadata: [
+                        HKMetadataKeyExternalUUID: id,
+                        HKMetadataKeySyncIdentifier: id,
+                        HKMetadataKeySyncVersion: 1
+                    ]
+                ) {
                     samples.append(carbSample)
                 }
 
                 // Fat Sample (only if value is greater than 0)
-                if let fatValue = allSamples.fat, fatValue > 0 {
-                    let fatSample = HKQuantitySample(
-                        type: fatSampleType,
-                        quantity: HKQuantity(unit: .gram(), doubleValue: Double(fatValue)),
-                        start: startDate,
-                        end: startDate,
-                        metadata: [
-                            HKMetadataKeyExternalUUID: fpuID,
-                            HKMetadataKeySyncIdentifier: fpuID,
-                            HKMetadataKeySyncVersion: 1
-                        ]
-                    )
+                if let fatValue = allSamples.fat, fatValue > 0, let fatSample = HKQuantitySample.checked(
+                    type: fatSampleType,
+                    unit: .gram(),
+                    value: Double(fatValue),
+                    start: startDate,
+                    end: startDate,
+                    metadata: [
+                        HKMetadataKeyExternalUUID: fpuID,
+                        HKMetadataKeySyncIdentifier: fpuID,
+                        HKMetadataKeySyncVersion: 1
+                    ]
+                ) {
                     samples.append(fatSample)
                 }
 
                 // Protein Sample (only if value is greater than 0)
-                if let proteinValue = allSamples.protein, proteinValue > 0 {
-                    let proteinSample = HKQuantitySample(
-                        type: proteinSampleType,
-                        quantity: HKQuantity(unit: .gram(), doubleValue: Double(proteinValue)),
-                        start: startDate,
-                        end: startDate,
-                        metadata: [
-                            HKMetadataKeyExternalUUID: fpuID,
-                            HKMetadataKeySyncIdentifier: fpuID,
-                            HKMetadataKeySyncVersion: 1
-                        ]
-                    )
+                if let proteinValue = allSamples.protein, proteinValue > 0, let proteinSample = HKQuantitySample.checked(
+                    type: proteinSampleType,
+                    unit: .gram(),
+                    value: Double(proteinValue),
+                    start: startDate,
+                    end: startDate,
+                    metadata: [
+                        HKMetadataKeyExternalUUID: fpuID,
+                        HKMetadataKeySyncIdentifier: fpuID,
+                        HKMetadataKeySyncVersion: 1
+                    ]
+                ) {
                     samples.append(proteinSample)
                 }
             }
@@ -544,10 +545,10 @@ final class BaseHealthKitManager: HealthKitManager, Injectable {
         // Calculate the end date based on the event duration
         let endDate = event.timestamp.addingTimeInterval(TimeInterval(minutes: Double(event.duration ?? 0)))
 
-        // Create the HealthKit quantity sample with the appropriate metadata
-        let sample = HKQuantitySample(
+        return HKQuantitySample.checked(
             type: sampleType,
-            quantity: HKQuantity(unit: .internationalUnit(), doubleValue: Double(insulinValue)),
+            unit: .internationalUnit(),
+            value: Double(insulinValue),
             start: event.timestamp,
             end: endDate,
             metadata: [
@@ -558,8 +559,6 @@ final class BaseHealthKitManager: HealthKitManager, Injectable {
                 AppleHealthConfig.TrioInsulinType: insulinTypeTitle(event.insulinType, isExternal: event.isExternal ?? false)
             ]
         )
-
-        return sample
     }
 
     // Helper function to process a predecessor temp basal entry and adjust overlapping durations
@@ -593,11 +592,11 @@ final class BaseHealthKitManager: HealthKitManager, Injectable {
             let adjustedDeliveredUnitsRounded = deviceDataManager?.pumpManager?
                 .roundToSupportedBolusVolume(units: adjustedDeliveredUnits) ?? adjustedDeliveredUnits
 
-            // Create the HealthKit quantity sample with the appropriate metadata
             // Intentionally do it here manually and do not use `createSample()` to handle utmost precise `end`.
-            let sample = HKQuantitySample(
+            return HKQuantitySample.checked(
                 type: sampleType,
-                quantity: HKQuantity(unit: .internationalUnit(), doubleValue: Double(adjustedDeliveredUnitsRounded)),
+                unit: .internationalUnit(),
+                value: Double(adjustedDeliveredUnitsRounded),
                 start: predecessorTimestamp,
                 end: adjustedEndDate,
                 metadata: [
@@ -608,9 +607,6 @@ final class BaseHealthKitManager: HealthKitManager, Injectable {
                     AppleHealthConfig.TrioInsulinType: insulinTypeTitle(predecessorEntry.insulinType)
                 ]
             )
-
-            // Create and return the HealthKit sample for the adjusted event
-            return sample
         }
 
         // If there is no overlap, no adjustment is needed
@@ -711,6 +707,65 @@ final class BaseHealthKitManager: HealthKitManager, Injectable {
                 }
             }
         }
+    }
+}
+
+extension HKQuantitySample {
+    /// Why HealthKit would refuse to create this sample, or nil. It refuses with an Objective-C exception,
+    /// which Swift cannot catch, so one misdated row crashed every upload until it aged out of the window.
+    static func rejectionReason(
+        type: HKQuantityType,
+        unit: HKUnit,
+        value: Double,
+        start: Date,
+        end: Date,
+        metadata: [String: Any]?
+    ) -> String? {
+        guard type.is(compatibleWith: unit) else { return "\(unit.unitString) is not a unit of \(type.identifier)" }
+        guard value.isFinite, value >= 0 else { return "its quantity is \(value)" }
+        guard start.timeIntervalSinceReferenceDate.isFinite, end.timeIntervalSinceReferenceDate.isFinite else {
+            return "its dates are not finite"
+        }
+        guard end >= start else { return "it ends before it starts" }
+        let duration = end.timeIntervalSince(start)
+        // maximumAllowedDuration and minimumAllowedDuration raise for a type that has no such limit
+        if type.isMaximumDurationRestricted, duration > type.maximumAllowedDuration {
+            return "it lasts longer than \(type.identifier) allows"
+        }
+        if type.isMinimumDurationRestricted, duration < type.minimumAllowedDuration {
+            return "it is shorter than \(type.identifier) allows"
+        }
+        if type.identifier == HKQuantityTypeIdentifier.insulinDelivery.rawValue,
+           metadata?[HKMetadataKeyInsulinDeliveryReason] == nil
+        {
+            return "it has no insulin delivery reason"
+        }
+        return nil
+    }
+
+    /// The sample, or nil, with a warning logged, where HealthKit would refuse it.
+    static func checked(
+        type: HKQuantityType,
+        unit: HKUnit,
+        value: Double,
+        start: Date,
+        end: Date,
+        metadata: [String: Any]?
+    ) -> HKQuantitySample? {
+        if let reason = rejectionReason(type: type, unit: unit, value: value, start: start, end: end, metadata: metadata) {
+            warning(
+                .healthKit,
+                "Not writing \(value) \(unit.unitString) of \(type.identifier) from \(start) to \(end) to Apple Health: \(reason)"
+            )
+            return nil
+        }
+        return HKQuantitySample(
+            type: type,
+            quantity: HKQuantity(unit: unit, doubleValue: value),
+            start: start,
+            end: end,
+            metadata: metadata
+        )
     }
 }
 
