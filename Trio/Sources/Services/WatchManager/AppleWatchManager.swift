@@ -1,6 +1,7 @@
 import Combine
 import CoreData
 import Foundation
+import LoopKit
 import Swinject
 import UIKit
 import WatchConnectivity
@@ -589,17 +590,27 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
         WatchStateSnapshot.saveLatestDateToDisk(state.date)
     }
 
-    func sendAcknowledgment(toWatch success: Bool, message: String = "", ackCode: AcknowledgmentCode) {
+    /// - Parameter bolusAmount: The bolus the acknowledgment is about, echoed so the watch can offer a retry
+    ///   of exactly that amount (sent with `.bolusInProgress`)
+    func sendAcknowledgment(
+        toWatch success: Bool,
+        message: String = "",
+        ackCode: AcknowledgmentCode,
+        bolusAmount: Decimal? = nil
+    ) {
         guard let session = session, session.isReachable else {
             debug(.watch, "Watch not reachable, acknowledgment not sent")
             return
         }
 
-        let ackMessage: [String: Any] = [
+        var ackMessage: [String: Any] = [
             WatchMessageKeys.acknowledged: success,
             WatchMessageKeys.message: message,
             WatchMessageKeys.ackCode: ackCode.rawValue
         ]
+        if let bolusAmount {
+            ackMessage[WatchMessageKeys.bolus] = NSDecimalNumber(decimal: bolusAmount).doubleValue
+        }
 
         session.sendMessage(ackMessage, replyHandler: nil) { error in
             warning(.watch, "Sending acknowledgment to watch failed", error: error)
@@ -807,9 +818,35 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
         }
     }
 
+    static let bolusInProgressMessage = String(
+        localized: "Pump is already delivering a bolus. Nothing was sent to the pump.",
+        comment: "Message sent to watch when a bolus is refused because the pump is already bolusing"
+    )
+
+    /// Refuses a watch bolus while the pump reports a bolus under way, before anything is sent to the
+    /// pump, and tells the watch with `.bolusInProgress` so it can offer a retry.
+    ///
+    /// Only this refusal is marked retryable. A bolus that failed after the command went to the pump
+    /// may still have been delivered, so it keeps the generic failure ("check pump history").
+    /// - Returns: true when the bolus was refused
+    private func refuseBolusIfPumpIsBolusing(_ amount: Decimal) -> Bool {
+        guard apsManager.pumpManager?.status.pumpStatus.bolusing == true else { return false }
+
+        warning(.bolus, "Watch bolus of \(amount) U not enacted, pump is already bolusing")
+        sendAcknowledgment(
+            toWatch: false,
+            message: Self.bolusInProgressMessage,
+            ackCode: .bolusInProgress,
+            bolusAmount: amount
+        )
+        return true
+    }
+
     /// Processes bolus requests received from the Watch
     /// - Parameter amount: The requested bolus amount in units
     private func handleBolusRequest(_ amount: Decimal) {
+        guard !refuseBolusIfPumpIsBolusing(amount) else { return }
+
         Task {
             await apsManager.enactBolus(amount: Double(amount), isSMB: false) { success, message in
                 // Acknowledge success or error of bolus
@@ -919,6 +956,9 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
                     debug(.treatments, "Saved \(carbsAmount) g carbs from watch")
                 }
 
+                // Carbs are saved, so a refusal here leaves only the bolus for the watch to retry
+                guard !refuseBolusIfPumpIsBolusing(bolusAmount) else { return }
+
                 // Notify Watch: "Enacting bolus..."
                 sendAcknowledgment(
                     toWatch: true,
@@ -931,7 +971,9 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
 
                 // Enact bolus via APS Manager
                 let bolusDouble = NSDecimalNumber(decimal: bolusAmount).doubleValue
+                var bolusEnacted = false
                 await apsManager.enactBolus(amount: bolusDouble, isSMB: false) { success, message in
+                    bolusEnacted = success
                     // Acknowledge success or error of bolus
                     self.sendAcknowledgment(
                         toWatch: success,
@@ -940,6 +982,8 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
                     )
                 }
                 debug(.bolus, "Watch bolus of \(bolusDouble) U handed to APS manager")
+                // A success message here would replace the bolus failure the watch is showing
+                guard bolusEnacted else { return }
                 // Notify Watch: "Carbs and bolus logged successfully"
                 sendAcknowledgment(
                     toWatch: true,
@@ -1162,6 +1206,8 @@ extension BaseWatchManager {
         case overrideStopped = "override_stopped"
         case tempTargetStarted = "temp_target_started"
         case tempTargetStopped = "temp_target_stopped"
+        /// Bolus refused before reaching the pump because the pump is already bolusing; the watch may retry
+        case bolusInProgress = "bolus_in_progress"
         case genericSuccess = "success"
         case genericFailure = "failure"
     }

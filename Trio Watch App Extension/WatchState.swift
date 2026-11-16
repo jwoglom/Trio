@@ -86,6 +86,26 @@ import WatchConnectivity
         comment: "Error message when a bolus of zero or less is requested"
     )
 
+    /// A bolus the phone refused because the pump was already delivering one. Nothing reached the pump,
+    /// so the watch offers to send the same amount again (through the crown confirmation).
+    struct RefusedBolus: Equatable {
+        let amount: Double
+        let refusedAt: Date
+        /// A carbs entry sent along with this bolus was logged; carbs are sent separately and are not retried
+        var carbsLogged = false
+    }
+
+    /// Set while the watch offers to retry a bolus refused because the pump was bolusing
+    var refusedBolus: RefusedBolus?
+    /// The retry is offered for this long after the refusal; after that the bolus must be entered again
+    static let bolusRetryLifetime: TimeInterval = 2 * 60
+    static let bolusRetryExpiredMessage = String(
+        localized: "Retry expired after 2 minutes. Nothing was sent. Please enter the bolus again.",
+        comment: "Watch message when a refused bolus was not retried in time"
+    )
+    /// When the phone last confirmed a carbs entry, so a refused bolus can say its carbs were logged
+    @ObservationIgnored private var carbsLoggedAt: Date?
+
     // Bolus calculation progress
     var showBolusCalculationProgress: Bool = false
 
@@ -169,6 +189,7 @@ import WatchConnectivity
     /// Shows "Processing…" and starts the clock for the phone's answer
     func beginAwaitingAcknowledgment(timeout: TimeInterval = WatchState.acknowledgmentTimeout) {
         acknowledgmentTimeoutWorkItem?.cancel()
+        refusedBolus = nil
         acknowledgementStatus = .pending
         showCommsAnimation = true
 
@@ -224,6 +245,72 @@ import WatchConnectivity
                 self.showSyncingAnimation = false // Just ensure this is 100% set to false
             }
         }
+    }
+
+    // MARK: - Bolus refused while the pump is bolusing
+
+    /// The phone refused a bolus because the pump was already bolusing. Offers a retry of that amount
+    /// instead of the banner, which would close the screen after 2 seconds.
+    func handleBolusRefusedWhileBolusing(amount: Double?, message: String, at now: Date = Date()) {
+        acknowledgmentTimeoutWorkItem?.cancel()
+        acknowledgmentTimeoutWorkItem = nil
+        isMealBolusCombo = false
+
+        guard let amount, amount > 0 else {
+            // Without the amount there is nothing to retry; show it like any other failure
+            handleAcknowledgment(success: false, message: message)
+            return
+        }
+
+        WatchLogger.shared.info(.bolus, "Offering retry of \(amount) U bolus refused while pump is bolusing")
+        showCommsAnimation = false
+        showAcknowledgmentBanner = false
+        acknowledgementStatus = .failure
+        acknowledgmentMessage = message
+
+        let carbsJustLogged = carbsLoggedAt.map { abs(now.timeIntervalSince($0)) <= Self.acknowledgmentTimeout } ?? false
+        refusedBolus = RefusedBolus(amount: amount, refusedAt: now, carbsLogged: carbsJustLogged)
+    }
+
+    /// True while the refused bolus can still be retried
+    func canRetryRefusedBolus(at now: Date = Date()) -> Bool {
+        guard let refusedBolus else { return false }
+        return now.timeIntervalSince(refusedBolus.refusedAt) <= Self.bolusRetryLifetime
+    }
+
+    /// Loads the refused bolus as a new entry, without carbs, for the user to confirm again with the crown.
+    /// Returns false, and shows why, when the retry has expired.
+    func prepareRefusedBolusRetry(at now: Date = Date()) -> Bool {
+        guard let refusedBolus else { return false }
+        guard canRetryRefusedBolus(at: now) else {
+            WatchLogger.shared.info(.bolus, "Retry of refused bolus expired")
+            self.refusedBolus = nil
+            handleRequestNotSent(Self.bolusRetryExpiredMessage)
+            return false
+        }
+
+        WatchLogger.shared.info(.bolus, "Retrying refused bolus of \(refusedBolus.amount) U")
+        self.refusedBolus = nil
+        clearEntry()
+        // Carbs were sent on their own the first time; only the bolus is retried
+        bolusAmount = refusedBolus.amount
+        markEntryEdited(at: now)
+        return true
+    }
+
+    /// The user declined to retry
+    func dismissRefusedBolus() {
+        WatchLogger.shared.info(.bolus, "Retry of refused bolus dismissed")
+        refusedBolus = nil
+    }
+
+    /// Drops a retry offer older than `bolusRetryLifetime`. Returns true when it did, so the caller can
+    /// leave the retry screen.
+    @discardableResult func expireStaleBolusRetry(at now: Date = Date()) -> Bool {
+        guard refusedBolus != nil, !canRetryRefusedBolus(at: now) else { return false }
+        WatchLogger.shared.info(.bolus, "Retry of refused bolus expired")
+        refusedBolus = nil
+        return true
     }
 
     // MARK: - WCSessionDelegate
@@ -400,7 +487,25 @@ import WatchConnectivity
                     self.showSyncingAnimation = false
                 }
 
+                if ackCode == .carbsLogged {
+                    self.carbsLoggedAt = Date()
+                }
+
+                // While a retry is offered, a late answer for the carbs sent with that bolus must not
+                // replace the retry screen
+                if ackCode != .bolusInProgress, self.refusedBolus != nil {
+                    if ackCode == .carbsLogged {
+                        self.refusedBolus?.carbsLogged = true
+                    }
+                    return
+                }
+
                 switch ackCode {
+                case .bolusInProgress:
+                    self.handleBolusRefusedWhileBolusing(
+                        amount: (message[WatchMessageKeys.bolus] as? NSNumber)?.doubleValue,
+                        message: ackMessage
+                    )
                 case .savingCarbs:
                     self.isMealBolusCombo = true
                     self.mealBolusStep = .savingCarbs

@@ -237,6 +237,10 @@ struct TrioMainWatchView: View {
                 if newPhase == .active, state.expireStaleEntry() {
                     navigationPath = NavigationPath()
                 }
+                // Likewise a retry offer for a refused bolus, so an old amount can't be retried
+                if newPhase == .active, state.expireStaleBolusRetry() {
+                    navigationPath = NavigationPath()
+                }
             }
         }
         .ignoresSafeArea()

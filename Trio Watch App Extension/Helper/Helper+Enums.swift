@@ -28,6 +28,8 @@ enum AcknowledgmentCode: String, Codable {
     case overrideStopped = "override_stopped"
     case tempTargetStarted = "temp_target_started"
     case tempTargetStopped = "temp_target_stopped"
+    /// Bolus refused before reaching the pump because the pump is already bolusing; safe to offer a retry
+    case bolusInProgress = "bolus_in_progress"
     case genericSuccess = "success"
     case genericFailure = "failure"
 }
