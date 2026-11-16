@@ -1,5 +1,6 @@
 import SwiftUI
 import Testing
+import WatchConnectivity
 @testable import Trio_Watch_App
 
 @Suite("Watch App Tests", .serialized) @MainActor final class TrioWatchAppTests {
@@ -272,5 +273,113 @@ import Testing
 
     @Test("Returning to the app with no entry in progress changes nothing") func testNoEntryOnReturn() throws {
         #expect(!watchState.expireStaleEntry(at: entryStart))
+    }
+
+    // MARK: - Bolus refused while the pump is bolusing
+
+    /// The phone's answer when it refused a bolus because the pump was already bolusing
+    private func bolusInProgressAck(amount: Double?) -> [String: Any] {
+        var message: [String: Any] = [
+            WatchMessageKeys.acknowledged: false,
+            WatchMessageKeys.message: "Pump is already delivering a bolus. Nothing was sent to the pump.",
+            WatchMessageKeys.ackCode: AcknowledgmentCode.bolusInProgress.rawValue
+        ]
+        if let amount { message[WatchMessageKeys.bolus] = amount }
+        return message
+    }
+
+    @Test("A bolus refused while the pump is bolusing offers a retry of that amount") func testBolusInProgressOffersRetry() async throws {
+        watchState.beginAwaitingAcknowledgment(timeout: 0.2)
+
+        watchState.session(WCSession.default, didReceiveMessage: bolusInProgressAck(amount: 2.5))
+        try await waitForMainQueue(0.6)
+
+        #expect(watchState.refusedBolus?.amount == 2.5)
+        #expect(watchState.acknowledgementStatus == .failure)
+        #expect(!watchState.showCommsAnimation)
+        // No banner: it would close the screen after 2 seconds; the late timeout must not show one either
+        #expect(!watchState.showAcknowledgmentBanner)
+        #expect(watchState.acknowledgmentMessage != WatchState.noAnswerMessage)
+    }
+
+    @Test("A refusal without the amount is shown as a plain failure") func testBolusInProgressWithoutAmount() async throws {
+        watchState.handleBolusRefusedWhileBolusing(amount: nil, message: "Pump is bolusing")
+
+        #expect(watchState.refusedBolus == nil)
+        #expect(watchState.acknowledgementStatus == .failure)
+        try await waitForMainQueue(0.5)
+        #expect(watchState.showAcknowledgmentBanner)
+    }
+
+    @Test("A late carbs answer keeps the retry offer and notes the carbs") func testCarbsAckKeepsRetry() async throws {
+        watchState.handleBolusRefusedWhileBolusing(amount: 2.5, message: "busy")
+
+        watchState.session(WCSession.default, didReceiveMessage: [
+            WatchMessageKeys.acknowledged: true,
+            WatchMessageKeys.message: "Carbs logged successfully.",
+            WatchMessageKeys.ackCode: AcknowledgmentCode.carbsLogged.rawValue
+        ])
+        try await waitForMainQueue(0.6)
+
+        #expect(watchState.refusedBolus?.amount == 2.5)
+        #expect(watchState.refusedBolus?.carbsLogged == true)
+        #expect(watchState.acknowledgementStatus == .failure)
+        #expect(!watchState.showAcknowledgmentBanner)
+    }
+
+    @Test("Carbs logged just before the refusal are noted") func testCarbsAckBeforeRefusal() async throws {
+        watchState.session(WCSession.default, didReceiveMessage: [
+            WatchMessageKeys.acknowledged: true,
+            WatchMessageKeys.message: "Carbs logged successfully.",
+            WatchMessageKeys.ackCode: AcknowledgmentCode.carbsLogged.rawValue
+        ])
+        watchState.session(WCSession.default, didReceiveMessage: bolusInProgressAck(amount: 1.0))
+        try await waitForMainQueue(0.6)
+
+        #expect(watchState.refusedBolus?.carbsLogged == true)
+    }
+
+    @Test("Retrying loads only the bolus as a fresh entry to confirm again") func testRetryLoadsBolusOnly() throws {
+        enterMealBolus()
+        watchState.handleBolusRefusedWhileBolusing(amount: 3.0, message: "busy", at: entryStart)
+        let retryAt = entryStart.addingTimeInterval(90)
+
+        #expect(watchState.prepareRefusedBolusRetry(at: retryAt))
+
+        #expect(watchState.refusedBolus == nil)
+        #expect(watchState.bolusAmount == 3.0)
+        #expect(watchState.carbsAmount == 0, "carbs were sent separately and must not be sent twice")
+        #expect(watchState.confirmationProgress == 0, "the crown must be dialed again")
+        #expect(watchState.isEntryFresh(at: retryAt))
+    }
+
+    @Test("A retry offer older than 2 minutes sends nothing") func testRetryExpires() throws {
+        watchState.handleBolusRefusedWhileBolusing(amount: 3.0, message: "busy", at: entryStart)
+
+        #expect(!watchState.prepareRefusedBolusRetry(at: entryStart.addingTimeInterval(121)))
+
+        #expect(watchState.refusedBolus == nil)
+        #expect(watchState.bolusAmount == 0)
+        #expect(watchState.acknowledgmentMessage == WatchState.bolusRetryExpiredMessage)
+    }
+
+    @Test("Returning to the app drops a retry offer older than 2 minutes") func testStaleRetryExpiresOnReturn() throws {
+        watchState.handleBolusRefusedWhileBolusing(amount: 3.0, message: "busy", at: entryStart)
+
+        #expect(!watchState.expireStaleBolusRetry(at: entryStart.addingTimeInterval(120)))
+        #expect(watchState.refusedBolus != nil)
+
+        #expect(watchState.expireStaleBolusRetry(at: entryStart.addingTimeInterval(121)))
+        #expect(watchState.refusedBolus == nil)
+    }
+
+    @Test("Dismissing or sending a new request clears the retry offer") func testRetryOfferCleared() throws {
+        watchState.handleBolusRefusedWhileBolusing(amount: 3.0, message: "busy")
+        watchState.dismissRefusedBolus()
+        #expect(watchState.refusedBolus == nil)
+
+        watchState.handleBolusRefusedWhileBolusing(amount: 3.0, message: "busy")
+        watchState.beginAwaitingAcknowledgment(timeout: 60)
+        #expect(watchState.refusedBolus == nil)
     }
 }
